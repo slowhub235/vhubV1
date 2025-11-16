@@ -28,6 +28,7 @@ local Workspace        = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService       = game:GetService("GuiService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService       = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 local playerGui   = LocalPlayer:WaitForChild("PlayerGui")
@@ -140,8 +141,7 @@ local function teleport(cf)
     end
 end
 
--- ==================== FIXED INSTANT REEL ====================
--- ==================== PERFECTED INSTANT REEL (.49s + CENTERED BAR) ====================
+-- ==================== FIXED & PERFECTED INSTANT REEL (CENTERED BAR) ====================
 local Fishing = {
     Enabled = false,
     ReelMode = "Smooth",
@@ -155,12 +155,11 @@ local isCasting = false
 local castCooldown = 0 
 local isReeling = false
 
--- ==================== ROD DETECTION FROM REPLICATEDSTORAGE ====================
+-- ROD DETECTION
 local function getCurrentRod()
     local char = LocalPlayer.Character
     if not char then return nil end
 
-    -- **DYNAMIC ROD LIST FROM REPLICATEDSTORAGE**
     local rodFolder = ReplicatedStorage:FindFirstChild("resources")
                         and ReplicatedStorage.resources:FindFirstChild("items")
                         and ReplicatedStorage.resources.items:FindFirstChild("rods")
@@ -174,7 +173,6 @@ local function getCurrentRod()
             end
         end
     else
-        -- Fallback: known rods
         validRodNames = {
             "Flimsy Rod", "Training Rod", "Plastic Rod", "Lucky Rod", "Kings Rod",
             "Nocturnal Rod", "Fast Rod", "Carbon Rod", "Long Rod", "Mythical Rod",
@@ -182,7 +180,6 @@ local function getCurrentRod()
         }
     end
 
-    -- **CHECK EQUIPPED TOOL**
     for _, rodName in ipairs(validRodNames) do
         local rod = char:FindFirstChild(rodName)
         if rod and rod:IsA("Tool") then
@@ -191,7 +188,6 @@ local function getCurrentRod()
         end
     end
 
-    -- **FALLBACK: ANY TOOL WITH .events**
     for _, tool in ipairs(char:GetChildren()) do
         if tool:IsA("Tool") and tool:FindFirstChild("events") then
             Fishing.RodName = tool.Name
@@ -225,16 +221,19 @@ local function doLegitReel()
     playerBar.Position = UDim2.new(fish.Position.X.Scale, fish.Position.X.Offset, fish.Position.Y.Scale, fish.Position.Y.Offset)
 end
 
--- **CENTERED WHITE BAR** during instant mode
+-- **PERFECT CENTERED BAR (FIXED)**
 local function keepBarCentered()
     local reel = playerGui:FindFirstChild("reel")
     if not reel then return end
-    local fish = reel.bar.fish
-    local playerBar = reel.bar.playerbar
+    local bar = reel:FindFirstChild("bar")
+    if not bar then return end
+    local fish = bar:FindFirstChild("fish")
+    local playerBar = bar:FindFirstChild("playerbar")
     if not fish or not playerBar then return end
-    
-    -- **KEEP WHITE BAR PERFECTLY CENTERED** (0.5 X position)
-    playerBar.Position = UDim2.new(0.5, 0, fish.Position.Y.Scale, fish.Position.Y.Offset)
+
+    -- Lock X to 0.5, match Y exactly
+    playerBar.Position = UDim2.fromScale(0.5, fish.Position.Y.Scale)
+    playerBar.AnchorPoint = Vector2.new(0.5, 0.5)
 end
 
 local function doInstantReel()
@@ -267,7 +266,7 @@ local function autoCast()
     isCasting = false
 end
 
--- **PERFECTED LOOP (.49s + CENTERED BAR)**
+-- **MAIN FISHING LOOP (FIXED CENTERING)**
 spawn(function()
     while true do
         task.wait()
@@ -302,14 +301,13 @@ spawn(function()
                     lastFishX = curX
                 end
 
-                -- **0.49s AFTER FIRST MOVE**
                 if curX ~= lastFishX and instantFireTime == nil then
-                    instantFireTime = tick() + 0.49  -- **PERFECT 0.49s**
+                    instantFireTime = tick() + 0.49
                     print("[AutoFish] Fish moved! 0.49s → instant...")
                     lastFishX = curX
                 end
 
-                -- **CENTER WHITE BAR UNTIL FIRE**
+                -- **FORCE CENTER EVERY FRAME**
                 keepBarCentered()
 
                 if instantFireTime and tick() >= instantFireTime then
@@ -333,12 +331,8 @@ spawn(function()
         end
     end
 end)
--- ==================== WALK ON WATER (TOGGLEABLE - EXACT SCRIPT) ====================
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
-local LocalPlayer = Players.LocalPlayer
+-- ==================== WALK ON WATER (TOGGLEABLE) ====================
 local WalkOnWater = {
     Enabled = false,
     Connection = nil,
@@ -365,7 +359,6 @@ local function updateWaterWalk()
         return
     end
    
-    -- Raycast down to detect water surface
     local rayOrigin = WalkOnWater.RootPart.Position
     local rayDirection = Vector3.new(0, -50, 0)
     local raycastParams = RaycastParams.new()
@@ -378,20 +371,16 @@ local function updateWaterWalk()
         local hitPart = raycastResult.Instance
         local hitPosition = raycastResult.Position
        
-        -- Check if hit water (transparent + water-like properties)
         if hitPart.Transparency > 0.3 and
            (hitPart.Name:lower():find("water") or hitPart.Material == Enum.Material.ForceField or hitPart.CanCollide == false) then
            
-            -- Stand perfectly on water surface (feet level)
             local waterSurfaceY = hitPosition.Y + 3
             WalkOnWater.BodyPosition.Position = Vector3.new(WalkOnWater.RootPart.Position.X, waterSurfaceY, WalkOnWater.RootPart.Position.Z)
            
-            -- Preserve normal movement (WASD, jump, etc.)
             local moveVector = WalkOnWater.Humanoid.MoveDirection * 16
             WalkOnWater.BodyVelocity.Velocity = Vector3.new(moveVector.X, 0, moveVector.Z)
            
         else
-            -- On land - disable water walking
             WalkOnWater.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
             WalkOnWater.BodyPosition.Position = WalkOnWater.RootPart.Position
         end
@@ -410,8 +399,7 @@ local function enableWalkOnWater()
     if WalkOnWater.Connection then WalkOnWater.Connection:Disconnect() end
     WalkOnWater.Connection = RunService.Heartbeat:Connect(updateWaterWalk)
     
-    print("🟦 WALK ON WATER ENABLED! Walk on any water surface!")
-    print("📝 Jump works normally | WASD movement preserved")
+    print("WALK ON WATER ENABLED!")
 end
 
 local function disableWalkOnWater()
@@ -433,25 +421,24 @@ local function disableWalkOnWater()
     end
 end
 
--- Handle character respawn
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     WalkOnWater.Character = newCharacter
     WalkOnWater.Humanoid = newCharacter:WaitForChild("Humanoid")
     WalkOnWater.RootPart = newCharacter:WaitForChild("HumanoidRootPart")
    
-    -- Re-parent body movers
     if WalkOnWater.Enabled and WalkOnWater.BodyVelocity and WalkOnWater.BodyPosition then
         WalkOnWater.BodyVelocity.Parent = WalkOnWater.RootPart
         WalkOnWater.BodyPosition.Parent = WalkOnWater.RootPart
     end
 end)
 
--- INITIALIZE
 if LocalPlayer.Character then
     WalkOnWater.Character = LocalPlayer.Character
     WalkOnWater.Humanoid = LocalPlayer.Character:WaitForChild("Humanoid")
     WalkOnWater.RootPart = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
 end
+
+-- ==================== UI ====================
 MainTab:CreateSection("Auto-Fish Controls")
 
 local EnableToggle = MainTab:CreateToggle({
@@ -475,7 +462,7 @@ local SmoothToggle = MainTab:CreateToggle({
 
 local InstantToggle = MainTab:CreateToggle({
     Name = "Instant Reel",
-    Description = "4s smooth to instant catch",
+    Description = "0.49s → instant catch",
     CurrentValue = false,
     Callback = function(v)
         if v then
@@ -486,20 +473,16 @@ local InstantToggle = MainTab:CreateToggle({
 }, "autofish_instant")
 
 TeleportsTab:CreateSection("World Teleports")
-
 local WorldDropdown = TeleportsTab:CreateDropdown({
     Name = "Select World Location",
-    Description = "25+ world locations",
     Options = worldNames,
     CurrentOption = worldNames[1],
     MultipleOptions = false,
     Flag = "world_location",
     Callback = function(v) SelectedWorld = v end
 })
-
 TeleportsTab:CreateButton({
     Name = "TELEPORT NOW",
-    Description = "Instant to selected world",
     Callback = function()
         teleport(WorldSpots[SelectedWorld])
         Luna:Notification({ Title = "Teleported!", Content = "World: " .. SelectedWorld, Duration = 2 })
@@ -507,20 +490,16 @@ TeleportsTab:CreateButton({
 })
 
 TeleportsTab:CreateSection("NPC Teleports")
-
 local NPCDropdown = TeleportsTab:CreateDropdown({
     Name = "Select NPC",
-    Description = "23 NPCs (Witch, Angler, etc.)",
     Options = npcNames,
     CurrentOption = npcNames[1],
     MultipleOptions = false,
     Flag = "npc_location",
     Callback = function(v) SelectedNPC = v end
 })
-
 TeleportsTab:CreateButton({
     Name = "TELEPORT NOW",
-    Description = "Instant to selected NPC",
     Callback = function()
         teleport(NPCSpots[SelectedNPC])
         Luna:Notification({ Title = "Teleported!", Content = "NPC: " .. SelectedNPC, Duration = 2 })
@@ -528,31 +507,26 @@ TeleportsTab:CreateButton({
 })
 
 TeleportsTab:CreateSection("Item & Rod Teleports")
-
 local ItemDropdown = TeleportsTab:CreateDropdown({
     Name = "Select Item/Rod",
-    Description = "19 rods, crates, gear, altar",
     Options = itemNames,
     CurrentOption = itemNames[1],
     MultipleOptions = false,
     Flag = "item_location",
     Callback = function(v) SelectedItem = v end
 })
-
 TeleportsTab:CreateButton({
     Name = "TELEPORT NOW",
-    Description = "Instant to selected item",
     Callback = function()
         teleport(ItemSpots[SelectedItem])
         Luna:Notification({ Title = "Teleported!", Content = "Item: " .. SelectedItem, Duration = 2 })
     end
 })
 
+-- Load config
 task.spawn(function()
     task.wait(1)
     local cfg = Luna:GetConfig()
-
-    -- Fishing
     if cfg["autofish_instant"] then
         Fishing.ReelMode = "Instant"; InstantToggle:Set(true); SmoothToggle:Set(false)
     elseif cfg["autofish_smooth"] then
@@ -561,9 +535,6 @@ task.spawn(function()
         SmoothToggle:Set(true)
     end
     if cfg["autofish_enable"] then EnableToggle:Set(true); Fishing.Enabled = true end
-    if cfg["autofish_rod"] then MainTab:GetInput("autofish_rod"):Set(cfg["autofish_rod"]); Fishing.RodName = cfg["autofish_rod"] end
-
-    -- Teleports
     if cfg["world_location"] then WorldDropdown:Set(cfg["world_location"]); SelectedWorld = cfg["world_location"] end
     if cfg["npc_location"] then NPCDropdown:Set(cfg["npc_location"]); SelectedNPC = cfg["npc_location"] end
     if cfg["item_location"] then ItemDropdown:Set(cfg["item_location"]); SelectedItem = cfg["item_location"] end
@@ -573,21 +544,16 @@ Luna:Notification({
     Title = "vhub fisch",
     Icon = "notifications_active",
     ImageSource = "Material",
-    Content = "loaded",
+    Content = "loaded + centered bar fixed",
     Duration = 8
 })
 
 PlayerTab:CreateSection("Player Stuff")
-
 local WaterToggle = PlayerTab:CreateToggle({
     Name = "Walk On Water",
     Description = "Walk perfectly on water surface",
     CurrentValue = false,
     Callback = function(v)
-        if v then
-            enableWalkOnWater()
-        else
-            disableWalkOnWater()
-        end
+        if v then enableWalkOnWater() else disableWalkOnWater() end
     end
 }, "walk_on_water")
