@@ -1,1 +1,593 @@
-# vhubV1
+-- ====================  VHUB FISCH – LEGIT + INSTANT REEL + TELEPORTS (SINGLE TAB)  ====================
+
+-- Load Luna UI
+local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Snxdfer/back-ups-for-libs/refs/heads/main/Luna_Source.lua", true))()
+
+-- Create Window
+local Window = Luna:CreateWindow({
+    Name = "vhub fisch",
+    Subtitle = "by ketsu",
+    LogoID = "82795327169782",
+    LoadingEnabled = true,
+    LoadingTitle = "Fisch",
+    LoadingSubtitle = "Loading...",
+    ConfigSettings = {
+        ConfigFolder = "vhubfisch"
+    },
+    KeySystem = false
+})
+
+-- Create Single Tab
+local MainTab = Window:CreateTab({ Name = "Main", Icon = nil, ImageSource = nil, ShowTitle = true })
+local TeleportsTab = Window:CreateTab({ Name = "Teleports", Icon = nil, ImageSource = nil, ShowTitle = true })
+local PlayerTab = Window:CreateTab({ Name = "Player", Icon = nil, ImageSource = nil, ShowTitle = true })
+
+-- ====================  SERVICES & GLOBALS  ====================
+local Players          = game:GetService("Players")
+local Workspace        = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GuiService       = game:GetService("GuiService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local LocalPlayer = Players.LocalPlayer
+local playerGui   = LocalPlayer:WaitForChild("PlayerGui")
+local events      = ReplicatedStorage:WaitForChild("events")
+
+-- ====================  TELEPORT DATA  ====================
+local WorldSpots = {
+    ["Altar"] = CFrame.new(1296.320068359375, -808.5519409179688, -298.93817138671875),
+    ["Arch"] = CFrame.new(998.966796875, 126.6849365234375, -1237.1434326171875),
+    ["Birch"] = CFrame.new(1742.3203125, 138.25787353515625, -2502.23779296875),
+    ["Brine"] = CFrame.new(-1794.10596, -145.849701, -3302.92358, -5.16176224e-05, 3.10316682e-06, 0.99999994, 0.119907647, 0.992785037, 3.10316682e-06, -0.992785037, 0.119907647, -5.16176224e-05),
+    ["Deep"] = CFrame.new(-1510.88672, -237.695053, -2852.90674, 0.573604643, 0.000580655003, 0.81913209, -0.000340352941, 0.999999762, -0.000470530824, -0.819132209, -8.89541116e-06, 0.573604763),
+    ["Deep Shop"] = CFrame.new(-979.196411, -247.910156, -2699.87207, 0.587748766, 0, 0.809043527, 0, 1, 0, -0.809043527, 0, 0.587748766),
+    ["Enchant"] = CFrame.new(1296.320068359375, -808.5519409179688, -298.93817138671875),
+    ["Executive"] = CFrame.new(-29.836761474609375, -250.48486328125, 199.11614990234375),
+    ["Keepers"] = CFrame.new(1296.320068359375, -808.5519409179688, -298.93817138671875),
+    ["Mod House"] = CFrame.new(-30.205902099609375, -249.40594482421875, 204.0529022216797),
+    ["Moosewood"] = CFrame.new(383.10113525390625, 131.2406005859375, 243.93385314941406),
+    ["Mushgrove"] = CFrame.new(2501.48583984375, 127.7583236694336, -720.699462890625),
+    ["Roslit"] = CFrame.new(-1476.511474609375, 130.16842651367188, 671.685302734375),
+    ["Snow"] = CFrame.new(2648.67578125, 139.06605529785156, 2521.29736328125),
+    ["Snowcap"] = CFrame.new(2648.67578125, 139.06605529785156, 2521.29736328125),
+    ["Spike"] = CFrame.new(-1254.800537109375, 133.88555908203125, 1554.2021484375),
+    ["Statue"] = CFrame.new(72.8836669921875, 138.6964874267578, -1028.4193115234375),
+    ["Sunstone"] = CFrame.new(-933.259705, 128.143951, -1119.52063, -0.342042685, 0, -0.939684391, 0, 1, 0, 0.939684391, 0, -0.342042685),
+    ["Swamp"] = CFrame.new(2501.48583984375, 127.7583236694336, -720.699462890625),
+    ["Terrapin"] = CFrame.new(-143.875244140625, 141.1676025390625, 1909.6070556640625),
+    ["Trident"] = CFrame.new(-1479.48987, -228.710632, -2391.39307, 0.0435845852, 0, 0.999049723, 0, 1, 0, -0.999049723, 0, 0.0435845852),
+    ["Vertigo"] = CFrame.new(-112.007278, -492.901093, 1040.32788, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+    ["Volcano"] = CFrame.new(-1888.52319, 163.847565, 329.238281, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+    ["Wilson"] = CFrame.new(2938.80591, 277.474762, 2567.13379, 0.4648332, 0, 0.885398269, 0, 1, 0, -0.885398269, 0, 0.4648332),
+    ["Wilson's Rod"] = CFrame.new(2879.2085, 135.07663, 2723.64233, 0.970463336, -0.168695927, -0.172460333, 0.141582936, -0.180552125, 0.973321974, -0.195333466, -0.968990743, -0.151334763),
+
+    ["castaway_clifs"] = CFrame.new(655.27307, 164.40184, -1839.68347, 0.56645, -0.00000, 0.82409, -0.00000, 1.00000, 0.00000, -0.82409, 0.00000, 0.56645),
+    ["lost_jungles"] = CFrame.new(-2431.85913, 131.82138, -2048.61475, 0.13593, 0.00000, -0.99072, 0.00000, 1.00000, 0.00000, 0.99072, 0.00000, 0.13593),
+    ["dephs"] = CFrame.new(526.24896, -705.80212, 1240.09229, -0.13918, 0.00000, -0.99027, -0.00000, 1.00000, 0.00000, 0.99027, 0.00000, -0.13918),
+    ["crystal_cove"] = CFrame.new(1363.95251, -612.27527, 2470.04272, 0.99920, -0.00000, -0.03997, 0.00000, 1.00000, -0.00000, 0.03997, 0.00000, 0.99920)
+}
+
+local NPCSpots = {
+    ["Witch"] = CFrame.new(409.638092, 134.451523, 311.403687, -0.74079144, 0, 0.671735108, 0, 1, 0, -0.671735108, 0, -0.74079144),
+    ["Quiet Synph"] = CFrame.new(566.263245, 152.000031, 353.872101, -0.753558397, 0, -0.657381535, 0, 1, 0, 0.657381535, 0, -0.753558397),
+    ["Pierre"] = CFrame.new(391.38855, 135.348389, 196.712387, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+    ["Phineas"] = CFrame.new(469.912292, 150.69342, 277.954987, 0.886104584, -0, -0.46348536, 0, 1, -0, 0.46348536, 0, 0.886104584),
+    ["Paul"] = CFrame.new(381.741882, 136.500031, 341.891022, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+    ["Shipwright"] = CFrame.new(357.972595, 133.615967, 258.154541, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+    ["Angler"] = CFrame.new(480.102478, 150.501053, 302.226898, 1, 0, 0, 0, 1, 0, 0, 0, 1),
+    ["Marc"] = CFrame.new(466.160034, 151.00206, 224.497086, -0.996853352, 0, -0.0792675018, 0, 1, 0, 0.0792675018, 0, -0.996853352),
+    ["Lucas"] = CFrame.new(449.33963, 181.999893, 180.689072, 0, 0, 1, 0, 1, -0, -1, 0, 0),
+    ["Lantern Keeper"] = CFrame.new(-39.0456772, -246.599976, 195.644363, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+    ["Lantern Keeper 2"] = CFrame.new(-17.4230175, -304.970276, -14.529892, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+    ["Inn Keeper"] = CFrame.new(487.458466, 150.800034, 231.498932, -0.564704418, 0, -0.825293183, 0, 1, 0, 0.825293183, 0, -0.564704418),
+    ["Roslit Keeper"] = CFrame.new(-1512.37891, 134.500031, 631.24353, 0.738236904, 0, -0.674541533, 0, 1, 0, 0.674541533, 0, 0.738236904),
+    ["Fishing NPC 1"] = CFrame.new(-1429.04138, 134.371552, 686.034424, 0, 0.0168599077, -0.999857903, 0, 0.999857903, 0.0168599077, 1, 0, 0),
+    ["Fishing NPC 2"] = CFrame.new(-1778.55408, 149.791779, 648.097107, 0.183140755, 0.0223737024, -0.982832015, 0, 0.999741018, 0.0227586292, 0.983086705, -0.00416803267, 0.183093324),
+    ["Fishing NPC 3"] = CFrame.new(-1778.26807, 147.83165, 653.258606, -0.129575253, 0.501478612, 0.855411887, -2.44146213e-05, 0.862683058, -0.505744994, -0.991569638, -0.0655529201, -0.111770131),
+    ["Henry"] = CFrame.new(483.539307, 152.383057, 236.296143, -0.789363742, 0, 0.613925934, 0, 1, 0, -0.613925934, 0, -0.789363742),
+    ["Daisy"] = CFrame.new(581.550049, 165.490753, 213.499969, -0.964885235, 0, -0.262671858, 0, 1, 0, 0.262671858, 0, -0.964885235),
+    ["Appraiser"] = CFrame.new(453.182373, 150.500031, 206.908783, 0, 0, 1, 0, 1, -0, -1, 0, 0),
+    ["Merchant"] = CFrame.new(416.690521, 130.302628, 342.765289, -0.249025017, -0.0326484665, 0.967946589, -0.0040341015, 0.999457955, 0.0326734781, -0.968488574, 0.00423171744, -0.249021754),
+    ["Mod Keeper"] = CFrame.new(-39.0905838, -245.141144, 195.837891, -0.948549569, -0.0898146331, -0.303623199, -0.197293222, 0.91766715, 0.34490931, 0.247647122, 0.387066364, -0.888172567),
+    ["Ashe"] = CFrame.new(-1709.94055, 149.862411, 729.399536, -0.92290163, 0.0273250472, -0.384064913, 0, 0.997478604, 0.0709675401, 0.385035753, 0.0654960647, -0.920574605),
+    ["Alfredrickus"] = CFrame.new(-1520.60632, 142.923264, 764.522034, 0.301733732, 0.390740901, -0.869642735, 0.0273988936, 0.908225596, 0.417582989, 0.952998459, -0.149826124, 0.26333645)
+}
+
+local ItemSpots = {
+    ["Training Rod"] = CFrame.new(457.693848, 148.357529, 230.414307, 1, -0, 0, 0, 0.975410998, 0.220393807, -0, -0.220393807, 0.975410998),
+    ["Plastic Rod"] = CFrame.new(454.425385, 148.169739, 229.172424, 0.951755166, 0.0709736273, -0.298537821, -3.42726707e-07, 0.972884834, 0.231290117, 0.306858391, -0.220131472, 0.925948203),
+    ["Lucky Rod"] = CFrame.new(446.085999, 148.253006, 222.160004, 0.974526405, -0.22305499, 0.0233404674, 0.196993902, 0.901088715, 0.386306256, -0.107199371, -0.371867687, 0.922075212),
+    ["Kings Rod"] = CFrame.new(1375.57642, -810.201721, -303.509247, -0.7490201, 0.662445903, -0.0116144121, -0.0837960541, -0.0773290396, 0.993478119, 0.657227278, 0.745108068, 0.113431036),
+    ["Flimsy Rod"] = CFrame.new(471.107697, 148.36171, 229.642441, 0.841614008, 0.0774728209, -0.534493923, 0.00678436086, 0.988063335, 0.153898612, 0.540036798, -0.13314943, 0.831042409),
+    ["Nocturnal Rod"] = CFrame.new(-141.874237, -515.313538, 1139.04529, 0.161644459, -0.98684907, 1.87754631e-05, 1.87754631e-05, 2.21133232e-05, 1, -0.98684907, -0.161644459, 2.21133232e-05),
+    ["Fast Rod"] = CFrame.new(447.183563, 148.225739, 220.187454, 0.981104493, 1.26492232e-05, 0.193478703, -0.0522461236, 0.962867677, 0.264870107, -0.186291039, -0.269973755, 0.944674432),
+    ["Carbon Rod"] = CFrame.new(454.083618, 150.590073, 225.328827, 0.985374212, -0.170404434, 1.41561031e-07, 1.41561031e-07, 1.7285347e-06, 1, -0.170404434, -0.985374212, 1.7285347e-06),
+    ["Long Rod"] = CFrame.new(485.695038, 171.656326, 145.746109, -0.630167365, -0.776459217, -5.33461571e-06, 5.33461571e-06, -1.12056732e-05, 1, -0.776459217, 0.630167365, 1.12056732e-05),
+    ["Mythical Rod"] = CFrame.new(389.716705, 132.588821, 314.042847, 0, 1, 0, 0, 0, -1, -1, 0, 0),
+    ["Midas Rod"] = CFrame.new(401.981659, 133.258316, 326.325745, 0.16456604, 0.986365497, 0.00103566051, 0.00017541647, 0.00102066994, -0.999999464, -0.986366034, 0.1645661, -5.00679016e-06),
+    ["Trident Rod"] = CFrame.new(-1484.34192, -222.325562, -2194.77002, -0.466092706, -0.536795318, 0.703284025, -0.319611132, 0.843386114, 0.43191275, -0.824988723, -0.0234660208, -0.56466186),
+    ["Enchanted Altar"] = CFrame.new(1310.54651, -799.469604, -82.7303467, 0.999973059, 0, 0.00733732153, 0, 1, 0, -0.00733732153, 0, 0.999973059),
+    ["Bait Crate"] = CFrame.new(384.57513427734375, 135.3519287109375, 337.5340270996094),
+    ["Quality Bait Crate"] = CFrame.new(-177.876, 144.472, 1932.844),
+    ["Crab Cage"] = CFrame.new(474.803589, 149.664566, 229.49469, -0.721874595, 0, 0.692023814, 0, 1, 0, -0.692023814, 0, -0.721874595),
+    ["GPS"] = CFrame.new(517.896729, 149.217636, 284.856842, 7.39097595e-06, -0.719539165, -0.694451928, -1, -7.39097595e-06, -3.01003456e-06, -3.01003456e-06, 0.694451928, -0.719539165),
+    ["Basic Diving Gear"] = CFrame.new(369.174774, 132.508835, 248.705368, 0.228398502, -0.158300221, -0.96061182, 1.58026814e-05, 0.986692965, -0.162594408, 0.973567724, 0.037121132, 0.225361705),
+    ["Fish Radar"] = CFrame.new(365.75177, 134.50499, 274.105804, 0.704499543, -0.111681774, -0.70086211, 1.32396817e-05, 0.987542748, -0.157350808, 0.709704578, 0.110844307, 0.695724905)
+}
+
+-- Extract names
+local worldNames = {}
+for name, _ in pairs(WorldSpots) do table.insert(worldNames, name) end
+table.sort(worldNames)
+
+local npcNames = {}
+for name, _ in pairs(NPCSpots) do table.insert(npcNames, name) end
+table.sort(npcNames)
+
+local itemNames = {}
+for name, _ in pairs(ItemSpots) do table.insert(itemNames, name) end
+table.sort(itemNames)
+
+-- Selected locations
+local SelectedWorld = worldNames[1]
+local SelectedNPC = npcNames[1]
+local SelectedItem = itemNames[1]
+
+local function teleport(cf)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = cf
+    end
+end
+
+-- ==================== FIXED INSTANT REEL ====================
+-- ==================== PERFECTED INSTANT REEL (.49s + CENTERED BAR) ====================
+local Fishing = {
+    Enabled = false,
+    ReelMode = "Smooth",
+    RodName = "Flimsy Rod", 
+    AutoCast = false 
+}
+
+local lastFishX = nil
+local instantFireTime = nil
+local isCasting = false
+local castCooldown = 0 
+local isReeling = false
+
+-- ==================== ROD DETECTION FROM REPLICATEDSTORAGE ====================
+local function getCurrentRod()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+
+    -- **DYNAMIC ROD LIST FROM REPLICATEDSTORAGE**
+    local rodFolder = ReplicatedStorage:FindFirstChild("resources")
+                        and ReplicatedStorage.resources:FindFirstChild("items")
+                        and ReplicatedStorage.resources.items:FindFirstChild("rods")
+    
+    local validRodNames = {}
+    
+    if rodFolder then
+        for _, rod in ipairs(rodFolder:GetChildren()) do
+            if rod:IsA("Folder") or rod:IsA("Model") then
+                table.insert(validRodNames, rod.Name)
+            end
+        end
+    else
+        -- Fallback: known rods
+        validRodNames = {
+            "Flimsy Rod", "Training Rod", "Plastic Rod", "Lucky Rod", "Kings Rod",
+            "Nocturnal Rod", "Fast Rod", "Carbon Rod", "Long Rod", "Mythical Rod",
+            "Midas Rod", "Trident Rod", "Wilson's Rod"
+        }
+    end
+
+    -- **CHECK EQUIPPED TOOL**
+    for _, rodName in ipairs(validRodNames) do
+        local rod = char:FindFirstChild(rodName)
+        if rod and rod:IsA("Tool") then
+            Fishing.RodName = rodName
+            return rod
+        end
+    end
+
+    -- **FALLBACK: ANY TOOL WITH .events**
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") and tool:FindFirstChild("events") then
+            Fishing.RodName = tool.Name
+            return tool
+        end
+    end
+
+    return nil
+end
+
+local function clickShake()
+    if not playerGui:FindFirstChild("shakeui") then return end
+    local btn = playerGui.shakeui.safezone:FindFirstChild("button")
+    if not btn then return end
+    xpcall(function()
+        local dummy = playerGui:FindFirstChild("_") or Instance.new("Frame")
+        dummy.Name = "_"; dummy.BackgroundTransparency = 1; dummy.Parent = playerGui
+        playerGui.SelectionImageObject = dummy
+        GuiService.SelectedObject = btn
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+    end, warn)
+end
+
+local function doLegitReel()
+    local reel = playerGui:FindFirstChild("reel")
+    if not reel then return end
+    local fish = reel.bar.fish
+    local playerBar = reel.bar.playerbar
+    if not fish or not playerBar then return end
+    playerBar.Position = UDim2.new(fish.Position.X.Scale, fish.Position.X.Offset, fish.Position.Y.Scale, fish.Position.Y.Offset)
+end
+
+-- **CENTERED WHITE BAR** during instant mode
+local function keepBarCentered()
+    local reel = playerGui:FindFirstChild("reel")
+    if not reel then return end
+    local fish = reel.bar.fish
+    local playerBar = reel.bar.playerbar
+    if not fish or not playerBar then return end
+    
+    -- **KEEP WHITE BAR PERFECTLY CENTERED** (0.5 X position)
+    playerBar.Position = UDim2.new(0.5, 0, fish.Position.Y.Scale, fish.Position.Y.Offset)
+end
+
+local function doInstantReel()
+    print("[AutoFish] INSTANT CATCH! (Rod: " .. Fishing.RodName .. ")")
+    
+    pcall(function() events["bindable_reel_finished"]:FireServer(100, true) end)
+    task.wait(0.05)
+    pcall(function() events["reelfinished "]:FireServer(100, false) end)
+    task.wait(0.05)
+    pcall(function() events["reelfinished"]:FireServer(100, true) end)
+    task.wait(0.1)
+    
+    local rod = getCurrentRod()
+    if rod then 
+        pcall(function() rod.events.reset:FireServer() end)
+    end
+end
+
+local function autoCast()
+    if isCasting or tick() < castCooldown then return end
+    isCasting = true
+    castCooldown = tick() + 1.8
+    print("[AutoFish] Auto-casting...")
+   
+    pcall(function()
+        events.bobberhandler.rod_cast:FireServer()
+    end)
+    print("[AutoFish] Cast fired!")
+   
+    isCasting = false
+end
+
+-- **PERFECTED LOOP (.49s + CENTERED BAR)**
+spawn(function()
+    while true do
+        task.wait()
+        if not Fishing.Enabled then
+            lastFishX = nil
+            instantFireTime = nil
+            isReeling = false
+            continue
+        end
+        
+        local rod = getCurrentRod()
+        if not rod then continue end
+
+        if playerGui:FindFirstChild("shakeui") then
+            clickShake()
+            isReeling = false
+        
+        elseif playerGui:FindFirstChild("reel") then
+            if Fishing.ReelMode == "Instant" then
+                local fish = playerGui.reel.bar.fish
+                if not fish then continue end
+                
+                local curX = fish.Position.X.Scale
+
+                if not isReeling then
+                    isReeling = true
+                    lastFishX = nil
+                    instantFireTime = nil
+                end
+
+                if lastFishX == nil then
+                    lastFishX = curX
+                end
+
+                -- **0.49s AFTER FIRST MOVE**
+                if curX ~= lastFishX and instantFireTime == nil then
+                    instantFireTime = tick() + 0.49  -- **PERFECT 0.49s**
+                    print("[AutoFish] Fish moved! 0.49s → instant...")
+                    lastFishX = curX
+                end
+
+                -- **CENTER WHITE BAR UNTIL FIRE**
+                keepBarCentered()
+
+                if instantFireTime and tick() >= instantFireTime then
+                    spawn(doInstantReel)
+                    isReeling = false
+                    lastFishX = nil
+                    instantFireTime = nil
+                end
+
+            else
+                doLegitReel()
+            end
+        
+        else
+            lastFishX = nil
+            instantFireTime = nil
+            isReeling = false
+            if Fishing.AutoCast and not isCasting then
+                spawn(autoCast)
+            end
+        end
+    end
+end)
+-- ==================== WALK ON WATER (TOGGLEABLE - EXACT SCRIPT) ====================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local WalkOnWater = {
+    Enabled = false,
+    Connection = nil,
+    BodyVelocity = nil,
+    BodyPosition = nil,
+    Character = nil,
+    Humanoid = nil,
+    RootPart = nil
+}
+
+local function setupBodyMovers()
+    WalkOnWater.BodyVelocity = Instance.new("BodyVelocity")
+    WalkOnWater.BodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+    WalkOnWater.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    
+    WalkOnWater.BodyPosition = Instance.new("BodyPosition")
+    WalkOnWater.BodyPosition.MaxForce = Vector3.new(4000, 10000, 4000)
+    WalkOnWater.BodyPosition.Position = WalkOnWater.RootPart.Position
+end
+
+local function updateWaterWalk()
+    if not WalkOnWater.Enabled then return end
+    if not WalkOnWater.Character or not WalkOnWater.Character.Parent or not WalkOnWater.RootPart.Parent then
+        return
+    end
+   
+    -- Raycast down to detect water surface
+    local rayOrigin = WalkOnWater.RootPart.Position
+    local rayDirection = Vector3.new(0, -50, 0)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {WalkOnWater.Character}
+   
+    local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+   
+    if raycastResult then
+        local hitPart = raycastResult.Instance
+        local hitPosition = raycastResult.Position
+       
+        -- Check if hit water (transparent + water-like properties)
+        if hitPart.Transparency > 0.3 and
+           (hitPart.Name:lower():find("water") or hitPart.Material == Enum.Material.ForceField or hitPart.CanCollide == false) then
+           
+            -- Stand perfectly on water surface (feet level)
+            local waterSurfaceY = hitPosition.Y + 3
+            WalkOnWater.BodyPosition.Position = Vector3.new(WalkOnWater.RootPart.Position.X, waterSurfaceY, WalkOnWater.RootPart.Position.Z)
+           
+            -- Preserve normal movement (WASD, jump, etc.)
+            local moveVector = WalkOnWater.Humanoid.MoveDirection * 16
+            WalkOnWater.BodyVelocity.Velocity = Vector3.new(moveVector.X, 0, moveVector.Z)
+           
+        else
+            -- On land - disable water walking
+            WalkOnWater.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            WalkOnWater.BodyPosition.Position = WalkOnWater.RootPart.Position
+        end
+    end
+end
+
+local function enableWalkOnWater()
+    WalkOnWater.Enabled = true
+    
+    if WalkOnWater.Character and WalkOnWater.RootPart then
+        setupBodyMovers()
+        WalkOnWater.BodyVelocity.Parent = WalkOnWater.RootPart
+        WalkOnWater.BodyPosition.Parent = WalkOnWater.RootPart
+    end
+    
+    if WalkOnWater.Connection then WalkOnWater.Connection:Disconnect() end
+    WalkOnWater.Connection = RunService.Heartbeat:Connect(updateWaterWalk)
+    
+    print("🟦 WALK ON WATER ENABLED! Walk on any water surface!")
+    print("📝 Jump works normally | WASD movement preserved")
+end
+
+local function disableWalkOnWater()
+    WalkOnWater.Enabled = false
+    
+    if WalkOnWater.Connection then
+        WalkOnWater.Connection:Disconnect()
+        WalkOnWater.Connection = nil
+    end
+    
+    if WalkOnWater.BodyVelocity then
+        WalkOnWater.BodyVelocity:Destroy()
+        WalkOnWater.BodyVelocity = nil
+    end
+    
+    if WalkOnWater.BodyPosition then
+        WalkOnWater.BodyPosition:Destroy()
+        WalkOnWater.BodyPosition = nil
+    end
+end
+
+-- Handle character respawn
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    WalkOnWater.Character = newCharacter
+    WalkOnWater.Humanoid = newCharacter:WaitForChild("Humanoid")
+    WalkOnWater.RootPart = newCharacter:WaitForChild("HumanoidRootPart")
+   
+    -- Re-parent body movers
+    if WalkOnWater.Enabled and WalkOnWater.BodyVelocity and WalkOnWater.BodyPosition then
+        WalkOnWater.BodyVelocity.Parent = WalkOnWater.RootPart
+        WalkOnWater.BodyPosition.Parent = WalkOnWater.RootPart
+    end
+end)
+
+-- INITIALIZE
+if LocalPlayer.Character then
+    WalkOnWater.Character = LocalPlayer.Character
+    WalkOnWater.Humanoid = LocalPlayer.Character:WaitForChild("Humanoid")
+    WalkOnWater.RootPart = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+end
+MainTab:CreateSection("Auto-Fish Controls")
+
+local EnableToggle = MainTab:CreateToggle({
+    Name = "Enable Auto-Fish",
+    Description = "Auto shake + reel (manual cast)",
+    CurrentValue = false,
+    Callback = function(v) Fishing.Enabled = v end
+}, "autofish_enable")
+
+local SmoothToggle = MainTab:CreateToggle({
+    Name = "Legit Reel",
+    Description = "Follow fish bar smoothly",
+    CurrentValue = true,
+    Callback = function(v)
+        if v then
+            Fishing.ReelMode = "Smooth"
+            InstantToggle:Set(false)
+        end
+    end
+}, "autofish_smooth")
+
+local InstantToggle = MainTab:CreateToggle({
+    Name = "Instant Reel",
+    Description = "4s smooth to instant catch",
+    CurrentValue = false,
+    Callback = function(v)
+        if v then
+            Fishing.ReelMode = "Instant"
+            SmoothToggle:Set(false)
+        end
+    end
+}, "autofish_instant")
+
+TeleportsTab:CreateSection("World Teleports")
+
+local WorldDropdown = TeleportsTab:CreateDropdown({
+    Name = "Select World Location",
+    Description = "25+ world locations",
+    Options = worldNames,
+    CurrentOption = worldNames[1],
+    MultipleOptions = false,
+    Flag = "world_location",
+    Callback = function(v) SelectedWorld = v end
+})
+
+TeleportsTab:CreateButton({
+    Name = "TELEPORT NOW",
+    Description = "Instant to selected world",
+    Callback = function()
+        teleport(WorldSpots[SelectedWorld])
+        Luna:Notification({ Title = "Teleported!", Content = "World: " .. SelectedWorld, Duration = 2 })
+    end
+})
+
+TeleportsTab:CreateSection("NPC Teleports")
+
+local NPCDropdown = TeleportsTab:CreateDropdown({
+    Name = "Select NPC",
+    Description = "23 NPCs (Witch, Angler, etc.)",
+    Options = npcNames,
+    CurrentOption = npcNames[1],
+    MultipleOptions = false,
+    Flag = "npc_location",
+    Callback = function(v) SelectedNPC = v end
+})
+
+TeleportsTab:CreateButton({
+    Name = "TELEPORT NOW",
+    Description = "Instant to selected NPC",
+    Callback = function()
+        teleport(NPCSpots[SelectedNPC])
+        Luna:Notification({ Title = "Teleported!", Content = "NPC: " .. SelectedNPC, Duration = 2 })
+    end
+})
+
+TeleportsTab:CreateSection("Item & Rod Teleports")
+
+local ItemDropdown = TeleportsTab:CreateDropdown({
+    Name = "Select Item/Rod",
+    Description = "19 rods, crates, gear, altar",
+    Options = itemNames,
+    CurrentOption = itemNames[1],
+    MultipleOptions = false,
+    Flag = "item_location",
+    Callback = function(v) SelectedItem = v end
+})
+
+TeleportsTab:CreateButton({
+    Name = "TELEPORT NOW",
+    Description = "Instant to selected item",
+    Callback = function()
+        teleport(ItemSpots[SelectedItem])
+        Luna:Notification({ Title = "Teleported!", Content = "Item: " .. SelectedItem, Duration = 2 })
+    end
+})
+
+task.spawn(function()
+    task.wait(1)
+    local cfg = Luna:GetConfig()
+
+    -- Fishing
+    if cfg["autofish_instant"] then
+        Fishing.ReelMode = "Instant"; InstantToggle:Set(true); SmoothToggle:Set(false)
+    elseif cfg["autofish_smooth"] then
+        Fishing.ReelMode = "Smooth"; SmoothToggle:Set(true); InstantToggle:Set(false)
+    else
+        SmoothToggle:Set(true)
+    end
+    if cfg["autofish_enable"] then EnableToggle:Set(true); Fishing.Enabled = true end
+    if cfg["autofish_rod"] then MainTab:GetInput("autofish_rod"):Set(cfg["autofish_rod"]); Fishing.RodName = cfg["autofish_rod"] end
+
+    -- Teleports
+    if cfg["world_location"] then WorldDropdown:Set(cfg["world_location"]); SelectedWorld = cfg["world_location"] end
+    if cfg["npc_location"] then NPCDropdown:Set(cfg["npc_location"]); SelectedNPC = cfg["npc_location"] end
+    if cfg["item_location"] then ItemDropdown:Set(cfg["item_location"]); SelectedItem = cfg["item_location"] end
+end)
+
+Luna:Notification({
+    Title = "vhub fisch",
+    Icon = "notifications_active",
+    ImageSource = "Material",
+    Content = "loaded",
+    Duration = 8
+})
+
+PlayerTab:CreateSection("Player Stuff")
+
+local WaterToggle = PlayerTab:CreateToggle({
+    Name = "Walk On Water",
+    Description = "Walk perfectly on water surface",
+    CurrentValue = false,
+    Callback = function(v)
+        if v then
+            enableWalkOnWater()
+        else
+            disableWalkOnWater()
+        end
+    end
+}, "walk_on_water")
