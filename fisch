@@ -61,11 +61,11 @@ local WorldSpots = {
     ["Volcano"] = CFrame.new(-1888.52319, 163.847565, 329.238281, 1, 0, 0, 0, 1, 0, 0, 0, 1),
     ["Wilson"] = CFrame.new(2938.80591, 277.474762, 2567.13379, 0.4648332, 0, 0.885398269, 0, 1, 0, -0.885398269, 0, 0.4648332),
     ["Wilson's Rod"] = CFrame.new(2879.2085, 135.07663, 2723.64233, 0.970463336, -0.168695927, -0.172460333, 0.141582936, -0.180552125, 0.973321974, -0.195333466, -0.968990743, -0.151334763),
-
-    ["castaway_clifs"] = CFrame.new(655.27307, 164.40184, -1839.68347, 0.56645, -0.00000, 0.82409, -0.00000, 1.00000, 0.00000, -0.82409, 0.00000, 0.56645),
-    ["lost_jungles"] = CFrame.new(-2431.85913, 131.82138, -2048.61475, 0.13593, 0.00000, -0.99072, 0.00000, 1.00000, 0.00000, 0.99072, 0.00000, 0.13593),
+    ["castaway clifs"] = CFrame.new(655.27307, 164.40184, -1839.68347, 0.56645, -0.00000, 0.82409, -0.00000, 1.00000, 0.00000, -0.82409, 0.00000, 0.56645),
+    ["lost jungles"] = CFrame.new(-2431.85913, 131.82138, -2048.61475, 0.13593, 0.00000, -0.99072, 0.00000, 1.00000, 0.00000, 0.99072, 0.00000, 0.13593),
     ["dephs"] = CFrame.new(526.24896, -705.80212, 1240.09229, -0.13918, 0.00000, -0.99027, -0.00000, 1.00000, 0.00000, 0.99027, 0.00000, -0.13918),
-    ["crystal_cove"] = CFrame.new(1363.95251, -612.27527, 2470.04272, 0.99920, -0.00000, -0.03997, 0.00000, 1.00000, -0.00000, 0.03997, 0.00000, 0.99920)
+    ["crystal cove"] = CFrame.new(1363.95251, -612.27527, 2470.04272, 0.99920, -0.00000, -0.03997, 0.00000, 1.00000, -0.00000, 0.03997, 0.00000, 0.99920),
+    ["crystal cove Water Fall"] = CFrame.new(1375.766, -603.571, 2337.410, 0.955, 0.000, -0.298, -0.000, 1.000, 0.000, 0.298, 0.000, 0.955)
 }
 
 local NPCSpots = {
@@ -141,25 +141,27 @@ local function teleport(cf)
     end
 end
 
--- ==================== FIXED & PERFECTED INSTANT REEL (CENTERED BAR) ====================
+-- ==================== FIXED & PERFECTED INSTANT REEL (BOTH BARS LOCKED TO CENTER) ====================
+-- ==================== REPLACED INSTANT REEL (SIMPLE + RELIABLE 0.73s) ====================
+-- ==================== FIXED & FASTER INSTANT REEL (.3s) ====================
+-- ==================== 3s WAIT + ULTRA-FAST SHAKE ====================
 local Fishing = {
     Enabled = false,
     ReelMode = "Smooth",
-    RodName = "Flimsy Rod", 
-    AutoCast = false 
+    RodName = "Flimsy Rod",
+    AutoCast = false
 }
 
 local lastFishX = nil
 local instantFireTime = nil
 local isCasting = false
-local castCooldown = 0 
+local castCooldown = 0
 local isReeling = false
 
--- ROD DETECTION
 local function getCurrentRod()
     local char = LocalPlayer.Character
     if not char then return nil end
-
+   
     local rodFolder = ReplicatedStorage:FindFirstChild("resources")
                         and ReplicatedStorage.resources:FindFirstChild("items")
                         and ReplicatedStorage.resources.items:FindFirstChild("rods")
@@ -187,29 +189,35 @@ local function getCurrentRod()
             return rod
         end
     end
-
+   
     for _, tool in ipairs(char:GetChildren()) do
         if tool:IsA("Tool") and tool:FindFirstChild("events") then
             Fishing.RodName = tool.Name
             return tool
         end
     end
-
+   
     return nil
 end
 
+-- **ULTRA-FAST SHAKE** - Spam clicks every frame
 local function clickShake()
     if not playerGui:FindFirstChild("shakeui") then return end
     local btn = playerGui.shakeui.safezone:FindFirstChild("button")
     if not btn then return end
-    xpcall(function()
-        local dummy = playerGui:FindFirstChild("_") or Instance.new("Frame")
-        dummy.Name = "_"; dummy.BackgroundTransparency = 1; dummy.Parent = playerGui
-        playerGui.SelectionImageObject = dummy
-        GuiService.SelectedObject = btn
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-    end, warn)
+    
+    -- **SPAM ENTER KEY** - Multiple rapid clicks per frame
+    for i = 1, 3 do
+        xpcall(function()
+            local dummy = playerGui:FindFirstChild("_") or Instance.new("Frame")
+            dummy.Name = "_"; dummy.BackgroundTransparency = 1; dummy.Parent = playerGui
+            playerGui.SelectionImageObject = dummy
+            GuiService.SelectedObject = btn
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+        end, warn)
+        task.wait(0.01)  -- Micro-delay between spam clicks
+    end
 end
 
 local function doLegitReel()
@@ -221,33 +229,27 @@ local function doLegitReel()
     playerBar.Position = UDim2.new(fish.Position.X.Scale, fish.Position.X.Offset, fish.Position.Y.Scale, fish.Position.Y.Offset)
 end
 
--- **PERFECT CENTERED BAR (FIXED)**
 local function keepBarCentered()
     local reel = playerGui:FindFirstChild("reel")
     if not reel then return end
-    local bar = reel:FindFirstChild("bar")
-    if not bar then return end
-    local fish = bar:FindFirstChild("fish")
-    local playerBar = bar:FindFirstChild("playerbar")
+    local fish = reel.bar.fish
+    local playerBar = reel.bar.playerbar
     if not fish or not playerBar then return end
-
-    -- Lock X to 0.5, match Y exactly
-    playerBar.Position = UDim2.fromScale(0.5, fish.Position.Y.Scale)
-    playerBar.AnchorPoint = Vector2.new(0.5, 0.5)
+    playerBar.Position = UDim2.new(0.5, 0, fish.Position.Y.Scale, fish.Position.Y.Offset)
 end
 
 local function doInstantReel()
     print("[AutoFish] INSTANT CATCH! (Rod: " .. Fishing.RodName .. ")")
-    
+   
     pcall(function() events["bindable_reel_finished"]:FireServer(100, true) end)
     task.wait(0.05)
     pcall(function() events["reelfinished "]:FireServer(100, false) end)
     task.wait(0.05)
     pcall(function() events["reelfinished"]:FireServer(100, true) end)
     task.wait(0.1)
-    
+   
     local rod = getCurrentRod()
-    if rod then 
+    if rod then
         pcall(function() rod.events.reset:FireServer() end)
     end
 end
@@ -257,16 +259,16 @@ local function autoCast()
     isCasting = true
     castCooldown = tick() + 1.8
     print("[AutoFish] Auto-casting...")
-   
+  
     pcall(function()
         events.bobberhandler.rod_cast:FireServer()
     end)
     print("[AutoFish] Cast fired!")
-   
+  
     isCasting = false
 end
 
--- **MAIN FISHING LOOP (FIXED CENTERING)**
+-- **3s WAIT + ULTRA-FAST SHAKE LOOP**
 spawn(function()
     while true do
         task.wait()
@@ -276,19 +278,20 @@ spawn(function()
             isReeling = false
             continue
         end
-        
+       
         local rod = getCurrentRod()
         if not rod then continue end
 
+        -- **ULTRA-FAST SHAKE** - Spams every frame
         if playerGui:FindFirstChild("shakeui") then
             clickShake()
             isReeling = false
-        
+       
         elseif playerGui:FindFirstChild("reel") then
             if Fishing.ReelMode == "Instant" then
                 local fish = playerGui.reel.bar.fish
                 if not fish then continue end
-                
+               
                 local curX = fish.Position.X.Scale
 
                 if not isReeling then
@@ -301,13 +304,13 @@ spawn(function()
                     lastFishX = curX
                 end
 
+                -- **3s AFTER FIRST MOVE**
                 if curX ~= lastFishX and instantFireTime == nil then
-                    instantFireTime = tick() + 0.49
-                    print("[AutoFish] Fish moved! 0.49s → instant...")
+                    instantFireTime = tick() + 2.7  -- **3 SECONDS**
+                    print("[AutoFish] Fish moved! 3s → instant...")
                     lastFishX = curX
                 end
 
-                -- **FORCE CENTER EVERY FRAME**
                 keepBarCentered()
 
                 if instantFireTime and tick() >= instantFireTime then
@@ -320,7 +323,7 @@ spawn(function()
             else
                 doLegitReel()
             end
-        
+       
         else
             lastFishX = nil
             instantFireTime = nil
@@ -331,113 +334,6 @@ spawn(function()
         end
     end
 end)
-
--- ==================== WALK ON WATER (TOGGLEABLE) ====================
-local WalkOnWater = {
-    Enabled = false,
-    Connection = nil,
-    BodyVelocity = nil,
-    BodyPosition = nil,
-    Character = nil,
-    Humanoid = nil,
-    RootPart = nil
-}
-
-local function setupBodyMovers()
-    WalkOnWater.BodyVelocity = Instance.new("BodyVelocity")
-    WalkOnWater.BodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
-    WalkOnWater.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    
-    WalkOnWater.BodyPosition = Instance.new("BodyPosition")
-    WalkOnWater.BodyPosition.MaxForce = Vector3.new(4000, 10000, 4000)
-    WalkOnWater.BodyPosition.Position = WalkOnWater.RootPart.Position
-end
-
-local function updateWaterWalk()
-    if not WalkOnWater.Enabled then return end
-    if not WalkOnWater.Character or not WalkOnWater.Character.Parent or not WalkOnWater.RootPart.Parent then
-        return
-    end
-   
-    local rayOrigin = WalkOnWater.RootPart.Position
-    local rayDirection = Vector3.new(0, -50, 0)
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {WalkOnWater.Character}
-   
-    local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-   
-    if raycastResult then
-        local hitPart = raycastResult.Instance
-        local hitPosition = raycastResult.Position
-       
-        if hitPart.Transparency > 0.3 and
-           (hitPart.Name:lower():find("water") or hitPart.Material == Enum.Material.ForceField or hitPart.CanCollide == false) then
-           
-            local waterSurfaceY = hitPosition.Y + 3
-            WalkOnWater.BodyPosition.Position = Vector3.new(WalkOnWater.RootPart.Position.X, waterSurfaceY, WalkOnWater.RootPart.Position.Z)
-           
-            local moveVector = WalkOnWater.Humanoid.MoveDirection * 16
-            WalkOnWater.BodyVelocity.Velocity = Vector3.new(moveVector.X, 0, moveVector.Z)
-           
-        else
-            WalkOnWater.BodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            WalkOnWater.BodyPosition.Position = WalkOnWater.RootPart.Position
-        end
-    end
-end
-
-local function enableWalkOnWater()
-    WalkOnWater.Enabled = true
-    
-    if WalkOnWater.Character and WalkOnWater.RootPart then
-        setupBodyMovers()
-        WalkOnWater.BodyVelocity.Parent = WalkOnWater.RootPart
-        WalkOnWater.BodyPosition.Parent = WalkOnWater.RootPart
-    end
-    
-    if WalkOnWater.Connection then WalkOnWater.Connection:Disconnect() end
-    WalkOnWater.Connection = RunService.Heartbeat:Connect(updateWaterWalk)
-    
-    print("WALK ON WATER ENABLED!")
-end
-
-local function disableWalkOnWater()
-    WalkOnWater.Enabled = false
-    
-    if WalkOnWater.Connection then
-        WalkOnWater.Connection:Disconnect()
-        WalkOnWater.Connection = nil
-    end
-    
-    if WalkOnWater.BodyVelocity then
-        WalkOnWater.BodyVelocity:Destroy()
-        WalkOnWater.BodyVelocity = nil
-    end
-    
-    if WalkOnWater.BodyPosition then
-        WalkOnWater.BodyPosition:Destroy()
-        WalkOnWater.BodyPosition = nil
-    end
-end
-
-LocalPlayer.CharacterAdded:Connect(function(newCharacter)
-    WalkOnWater.Character = newCharacter
-    WalkOnWater.Humanoid = newCharacter:WaitForChild("Humanoid")
-    WalkOnWater.RootPart = newCharacter:WaitForChild("HumanoidRootPart")
-   
-    if WalkOnWater.Enabled and WalkOnWater.BodyVelocity and WalkOnWater.BodyPosition then
-        WalkOnWater.BodyVelocity.Parent = WalkOnWater.RootPart
-        WalkOnWater.BodyPosition.Parent = WalkOnWater.RootPart
-    end
-end)
-
-if LocalPlayer.Character then
-    WalkOnWater.Character = LocalPlayer.Character
-    WalkOnWater.Humanoid = LocalPlayer.Character:WaitForChild("Humanoid")
-    WalkOnWater.RootPart = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
-end
-
 -- ==================== UI ====================
 MainTab:CreateSection("Auto-Fish Controls")
 
@@ -462,7 +358,7 @@ local SmoothToggle = MainTab:CreateToggle({
 
 local InstantToggle = MainTab:CreateToggle({
     Name = "Instant Reel",
-    Description = "0.49s → instant catch",
+    Description = "0.49s → instant catch (bars locked)",
     CurrentValue = false,
     Callback = function(v)
         if v then
@@ -544,16 +440,6 @@ Luna:Notification({
     Title = "vhub fisch",
     Icon = "notifications_active",
     ImageSource = "Material",
-    Content = "loaded + centered bar fixed",
+    Content = "loaded + bars fully locked to center",
     Duration = 8
 })
-
-PlayerTab:CreateSection("Player Stuff")
-local WaterToggle = PlayerTab:CreateToggle({
-    Name = "Walk On Water",
-    Description = "Walk perfectly on water surface",
-    CurrentValue = false,
-    Callback = function(v)
-        if v then enableWalkOnWater() else disableWalkOnWater() end
-    end
-}, "walk_on_water")
