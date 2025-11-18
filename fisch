@@ -1,40 +1,29 @@
--- ====================  VHUB FISCH – LEGIT + INSTANT REEL + TELEPORTS (SINGLE TAB)  ====================
-
--- Load Luna UI
+-- ==================== VHUB FISCH – FULLY MODULAR AUTO FISH (2025) ====================
 local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Snxdfer/back-ups-for-libs/refs/heads/main/Luna_Source.lua", true))()
-
--- Create Window
 local Window = Luna:CreateWindow({
-    Name = "vhub fisch",
-    Subtitle = "by ketsu",
+    Name = "vhub immortal | fisch",
+    Subtitle = "fully modular - 2025",
     LogoID = "82795327169782",
     LoadingEnabled = true,
-    LoadingTitle = "Fisch",
+    LoadingTitle = "vhub immortal",
     LoadingSubtitle = "Loading...",
-    ConfigSettings = {
-        ConfigFolder = "vhubfisch"
-    },
+    ConfigSettings = { ConfigFolder = "vhubfisch" },
     KeySystem = false
 })
 
--- Create Single Tab
-local MainTab = Window:CreateTab({ Name = "Main", Icon = nil, ImageSource = nil, ShowTitle = true })
-local TeleportsTab = Window:CreateTab({ Name = "Teleports", Icon = nil, ImageSource = nil, ShowTitle = true })
-local PlayerTab = Window:CreateTab({ Name = "Player", Icon = nil, ImageSource = nil, ShowTitle = true })
+local MainTab = Window:CreateTab({ Name = "Main", Icon = nil })
+local TeleportsTab = Window:CreateTab({ Name = "Teleports", Icon = nil })
 
--- ====================  SERVICES & GLOBALS  ====================
-local Players          = game:GetService("Players")
-local Workspace        = game:GetService("Workspace")
+-- Services & Globals (unchanged)
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local GuiService       = game:GetService("GuiService")
+local GuiService = game:GetService("GuiService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local RunService       = game:GetService("RunService")
-
 local LocalPlayer = Players.LocalPlayer
-local playerGui   = LocalPlayer:WaitForChild("PlayerGui")
-local events      = ReplicatedStorage:WaitForChild("events")
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+local events = ReplicatedStorage:WaitForChild("events")
 
--- ====================  TELEPORT DATA  ====================
 local WorldSpots = {
     ["Altar"] = CFrame.new(1296.320068359375, -808.5519409179688, -298.93817138671875),
     ["Arch"] = CFrame.new(998.966796875, 126.6849365234375, -1237.1434326171875),
@@ -116,97 +105,52 @@ local ItemSpots = {
     ["Fish Radar"] = CFrame.new(365.75177, 134.50499, 274.105804, 0.704499543, -0.111681774, -0.70086211, 1.32396817e-05, 0.987542748, -0.157350808, 0.709704578, 0.110844307, 0.695724905)
 }
 
--- Extract names
-local worldNames = {}
-for name, _ in pairs(WorldSpots) do table.insert(worldNames, name) end
-table.sort(worldNames)
+-- Extract names for dropdowns
+local worldNames, npcNames, itemNames = {}, {}, {}
+for name,_ in pairs(WorldSpots) do table.insert(worldNames, name) end
+for name,_ in pairs(NPCSpots) do table.insert(npcNames, name) end
+for name,_ in pairs(ItemSpots) do table.insert(itemNames, name) end
+table.sort(worldNames); table.sort(npcNames); table.sort(itemNames)
 
-local npcNames = {}
-for name, _ in pairs(NPCSpots) do table.insert(npcNames, name) end
-table.sort(npcNames)
-
-local itemNames = {}
-for name, _ in pairs(ItemSpots) do table.insert(itemNames, name) end
-table.sort(itemNames)
-
--- Selected locations
 local SelectedWorld = worldNames[1]
 local SelectedNPC = npcNames[1]
 local SelectedItem = itemNames[1]
 
 local function teleport(cf)
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = cf
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = cf
     end
 end
 
--- ==================== FIXED & PERFECTED INSTANT REEL (BOTH BARS LOCKED TO CENTER) ====================
--- ==================== REPLACED INSTANT REEL (SIMPLE + RELIABLE 0.73s) ====================
--- ==================== FIXED & FASTER INSTANT REEL (.3s) ====================
--- ==================== 3s WAIT + ULTRA-FAST SHAKE ====================
+-- ==================== FISHING SETTINGS ====================
 local Fishing = {
-    Enabled = false,
-    ReelMode = "Smooth",
-    RodName = "Flimsy Rod",
-    AutoCast = false
+    AutoCast   = false,
+    AutoShake  = false,
+    AutoReel   = false,
+    ReelMode   = "Smooth",   -- "Smooth" or "Instant"
+    CastType   = "Legit"     -- "Legit" or "Instant"
 }
 
-local lastFishX = nil
-local instantFireTime = nil
 local isCasting = false
 local castCooldown = 0
+local lastFishX = nil
+local instantFireTime = nil
 local isReeling = false
 
 local function getCurrentRod()
     local char = LocalPlayer.Character
     if not char then return nil end
-   
-    local rodFolder = ReplicatedStorage:FindFirstChild("resources")
-                        and ReplicatedStorage.resources:FindFirstChild("items")
-                        and ReplicatedStorage.resources.items:FindFirstChild("rods")
-    
-    local validRodNames = {}
-    
-    if rodFolder then
-        for _, rod in ipairs(rodFolder:GetChildren()) do
-            if rod:IsA("Folder") or rod:IsA("Model") then
-                table.insert(validRodNames, rod.Name)
-            end
-        end
-    else
-        validRodNames = {
-            "Flimsy Rod", "Training Rod", "Plastic Rod", "Lucky Rod", "Kings Rod",
-            "Nocturnal Rod", "Fast Rod", "Carbon Rod", "Long Rod", "Mythical Rod",
-            "Midas Rod", "Trident Rod", "Wilson's Rod"
-        }
-    end
-
-    for _, rodName in ipairs(validRodNames) do
-        local rod = char:FindFirstChild(rodName)
-        if rod and rod:IsA("Tool") then
-            Fishing.RodName = rodName
-            return rod
-        end
-    end
-   
     for _, tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") and tool:FindFirstChild("events") then
-            Fishing.RodName = tool.Name
-            return tool
-        end
+        if tool:IsA("Tool") and tool:FindFirstChild("events") then return tool end
     end
-   
     return nil
 end
 
--- **ULTRA-FAST SHAKE** - Spam clicks every frame
+-- ==================== SHAKE ====================
 local function clickShake()
     if not playerGui:FindFirstChild("shakeui") then return end
     local btn = playerGui.shakeui.safezone:FindFirstChild("button")
     if not btn then return end
-    
-    -- **SPAM ENTER KEY** - Multiple rapid clicks per frame
     for i = 1, 3 do
         xpcall(function()
             local dummy = playerGui:FindFirstChild("_") or Instance.new("Frame")
@@ -216,17 +160,19 @@ local function clickShake()
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
             VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
         end, warn)
-        task.wait(0.01)  -- Micro-delay between spam clicks
+        task.wait(0.01)
     end
 end
 
+-- ==================== REEL FUNCTIONS ====================
 local function doLegitReel()
     local reel = playerGui:FindFirstChild("reel")
     if not reel then return end
     local fish = reel.bar.fish
     local playerBar = reel.bar.playerbar
-    if not fish or not playerBar then return end
-    playerBar.Position = UDim2.new(fish.Position.X.Scale, fish.Position.X.Offset, fish.Position.Y.Scale, fish.Position.Y.Offset)
+    if fish and playerBar then
+        playerBar.Position = UDim2.new(fish.Position.X.Scale, fish.Position.X.Offset, fish.Position.Y.Scale, fish.Position.Y.Offset)
+    end
 end
 
 local function keepBarCentered()
@@ -234,139 +180,151 @@ local function keepBarCentered()
     if not reel then return end
     local fish = reel.bar.fish
     local playerBar = reel.bar.playerbar
-    if not fish or not playerBar then return end
-    playerBar.Position = UDim2.new(0.5, 0, fish.Position.Y.Scale, fish.Position.Y.Offset)
+    if fish and playerBar then
+        playerBar.Position = UDim2.new(0.5, 0, fish.Position.Y.Scale, fish.Position.Y.Offset)
+    end
 end
 
 local function doInstantReel()
-    print("[AutoFish] INSTANT CATCH! (Rod: " .. Fishing.RodName .. ")")
-   
+    print("[AutoFish] INSTANT REEL FIRED!")
     pcall(function() events["bindable_reel_finished"]:FireServer(100, true) end)
     task.wait(0.05)
     pcall(function() events["reelfinished "]:FireServer(100, false) end)
     task.wait(0.05)
     pcall(function() events["reelfinished"]:FireServer(100, true) end)
-    task.wait(0.1)
-   
-    local rod = getCurrentRod()
-    if rod then
-        pcall(function() rod.events.reset:FireServer() end)
-    end
 end
 
-local function autoCast()
+-- ==================== CAST FUNCTIONS ====================
+local function legitCast()
     if isCasting or tick() < castCooldown then return end
     isCasting = true
-    castCooldown = tick() + 1.8
-    print("[AutoFish] Auto-casting...")
-  
-    pcall(function()
-        events.bobberhandler.rod_cast:FireServer()
-    end)
-    print("[AutoFish] Cast fired!")
-  
+    castCooldown = tick() + 0.7
+
+    local rod = getCurrentRod()
+    if not rod then isCasting = false return end
+
+    pcall(function() rod.events.castAsync:InvokeServer(98, 1) end)
+    task.wait(0.35)
     isCasting = false
 end
 
--- **3s WAIT + ULTRA-FAST SHAKE LOOP**
+local function instantCast()
+    if isCasting or tick() < castCooldown then return end
+    isCasting = true
+    castCooldown = tick() + 0.7
+
+    local rod = getCurrentRod()
+    if not rod then isCasting = false return end
+
+    pcall(function() rod.events.castAsync:InvokeServer(100, 1) end) -- max power
+    task.wait(0.1)
+
+    local bobber = rod:FindFirstChild("bobber")
+    if bobber and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Include
+        params.FilterDescendantsInstances = {workspace.Terrain}
+        local result = workspace:Raycast(bobber.Position, Vector3.new(0, -1000, 0), params)
+        if result then
+            bobber:PivotTo(CFrame.new(result.Position + Vector3.new(0, 3, 0)))
+        end
+    end
+    isCasting = false
+end
+
+local function autoCast()
+    if Fishing.CastType == "Instant" then instantCast() else legitCast() end
+end
+
+-- ==================== MAIN LOOP ====================
 spawn(function()
     while true do
         task.wait()
-        if not Fishing.Enabled then
-            lastFishX = nil
-            instantFireTime = nil
-            isReeling = false
-            continue
-        end
-       
-        local rod = getCurrentRod()
-        if not rod then continue end
 
-        -- **ULTRA-FAST SHAKE** - Spams every frame
-        if playerGui:FindFirstChild("shakeui") then
+        -- Auto Shake
+        if Fishing.AutoShake and playerGui:FindFirstChild("shakeui") then
             clickShake()
-            isReeling = false
-       
-        elseif playerGui:FindFirstChild("reel") then
+        end
+
+        -- Auto Reel
+        if Fishing.AutoReel and playerGui:FindFirstChild("reel") then
             if Fishing.ReelMode == "Instant" then
                 local fish = playerGui.reel.bar.fish
-                if not fish then continue end
-               
-                local curX = fish.Position.X.Scale
-
-                if not isReeling then
-                    isReeling = true
-                    lastFishX = nil
-                    instantFireTime = nil
+                if fish then
+                    local curX = fish.Position.X.Scale
+                    if not isReeling then isReeling = true; lastFishX = nil; instantFireTime = nil end
+                    if lastFishX == nil then lastFishX = curX end
+                    if curX ~= lastFishX and instantFireTime == nil then
+                        instantFireTime = tick() + 2.69
+                        lastFishX = curX
+                    end
+                    keepBarCentered()
+                    if instantFireTime and tick() >= instantFireTime then
+                        spawn(doInstantReel)
+                        isReeling = false
+                        lastFishX = nil
+                        instantFireTime = nil
+                    end
                 end
-
-                if lastFishX == nil then
-                    lastFishX = curX
-                end
-
-                -- **3s AFTER FIRST MOVE**
-                if curX ~= lastFishX and instantFireTime == nil then
-                    instantFireTime = tick() + 2.7  -- **3 SECONDS**
-                    print("[AutoFish] Fish moved! 3s → instant...")
-                    lastFishX = curX
-                end
-
-                keepBarCentered()
-
-                if instantFireTime and tick() >= instantFireTime then
-                    spawn(doInstantReel)
-                    isReeling = false
-                    lastFishX = nil
-                    instantFireTime = nil
-                end
-
             else
                 doLegitReel()
             end
-       
-        else
+        end
+
+        -- Auto Cast (when nothing else is happening)
+        if Fishing.AutoCast and not playerGui:FindFirstChild("reel") and not playerGui:FindFirstChild("shakeui") then
+            spawn(autoCast)
+        end
+
+        -- Reset states when nothing is active
+        if not playerGui:FindFirstChild("reel") and not playerGui:FindFirstChild("shakeui") then
             lastFishX = nil
             instantFireTime = nil
             isReeling = false
-            if Fishing.AutoCast and not isCasting then
-                spawn(autoCast)
-            end
         end
     end
 end)
+
 -- ==================== UI ====================
-MainTab:CreateSection("Auto-Fish Controls")
+MainTab:CreateSection("Main")
 
-local EnableToggle = MainTab:CreateToggle({
-    Name = "Enable Auto-Fish",
-    Description = "Auto shake + reel (manual cast)",
+MainTab:CreateToggle({
+    Name = "Auto Cast",
     CurrentValue = false,
-    Callback = function(v) Fishing.Enabled = v end
-}, "autofish_enable")
+    Callback = function(v) Fishing.AutoCast = v end
+})
 
-local SmoothToggle = MainTab:CreateToggle({
-    Name = "Legit Reel",
-    Description = "Follow fish bar smoothly",
+MainTab:CreateToggle({
+    Name = "Auto Shake",
     CurrentValue = true,
-    Callback = function(v)
-        if v then
-            Fishing.ReelMode = "Smooth"
-            InstantToggle:Set(false)
-        end
-    end
-}, "autofish_smooth")
+    Callback = function(v) Fishing.AutoShake = v end
+})
 
-local InstantToggle = MainTab:CreateToggle({
-    Name = "Instant Reel",
-    Description = "0.49s → instant catch (bars locked)",
-    CurrentValue = false,
+MainTab:CreateToggle({
+    Name = "Auto Reel",
+    CurrentValue = true,
+    Callback = function(v) Fishing.AutoReel = v end
+})
+
+MainTab:CreateSection("Properties")
+
+MainTab:CreateDropdown({
+    Name = "Reel Mode",
+    Options = {"Smooth (Legit)", "Instant (3s → Catch)"},
+    CurrentOption = "Smooth (Legit)",
     Callback = function(v)
-        if v then
-            Fishing.ReelMode = "Instant"
-            SmoothToggle:Set(false)
-        end
+        Fishing.ReelMode = (v == "Instant (3s → Catch)") and "Instant" or "Smooth"
     end
-}, "autofish_instant")
+})
+
+MainTab:CreateDropdown({
+    Name = "Cast Type",
+    Options = {"V1 Auto Cast", "V2 Auto Cast"},
+    CurrentOption = "Legit Cast",
+    Callback = function(v)
+        Fishing.CastType = (v == "Instant Cast") and "Instant" or "Legit"
+    end
+})
 
 TeleportsTab:CreateSection("World Teleports")
 local WorldDropdown = TeleportsTab:CreateDropdown({
@@ -419,27 +377,8 @@ TeleportsTab:CreateButton({
     end
 })
 
--- Load config
-task.spawn(function()
-    task.wait(1)
-    local cfg = Luna:GetConfig()
-    if cfg["autofish_instant"] then
-        Fishing.ReelMode = "Instant"; InstantToggle:Set(true); SmoothToggle:Set(false)
-    elseif cfg["autofish_smooth"] then
-        Fishing.ReelMode = "Smooth"; SmoothToggle:Set(true); InstantToggle:Set(false)
-    else
-        SmoothToggle:Set(true)
-    end
-    if cfg["autofish_enable"] then EnableToggle:Set(true); Fishing.Enabled = true end
-    if cfg["world_location"] then WorldDropdown:Set(cfg["world_location"]); SelectedWorld = cfg["world_location"] end
-    if cfg["npc_location"] then NPCDropdown:Set(cfg["npc_location"]); SelectedNPC = cfg["npc_location"] end
-    if cfg["item_location"] then ItemDropdown:Set(cfg["item_location"]); SelectedItem = cfg["item_location"] end
-end)
-
 Luna:Notification({
     Title = "vhub fisch",
-    Icon = "notifications_active",
-    ImageSource = "Material",
-    Content = "loaded + bars fully locked to center",
+    Content = "Fully modular auto fish loaded! Separate toggles added.",
     Duration = 8
 })
