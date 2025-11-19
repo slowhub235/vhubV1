@@ -319,7 +319,7 @@ MainTab:CreateDropdown({
 
 MainTab:CreateDropdown({
     Name = "Cast Type",
-    Options = {"V1 Auto Cast", "V2 Auto Cast"},
+    Options = {"Legit Cast", "Instant Cast"},
     CurrentOption = "Legit Cast",
     Callback = function(v)
         Fishing.CastType = (v == "Instant Cast") and "Instant" or "Legit"
@@ -382,3 +382,4 @@ Luna:Notification({
     Content = "Fully modular auto fish loaded! Separate toggles added.",
     Duration = 8
 })
+
