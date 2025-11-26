@@ -1,0 +1,350 @@
+repeat task.wait() until game:IsLoaded()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
+local Stats = game:GetService("Stats")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+
+local Alive = Workspace:FindFirstChild("Alive")
+local Aerodynamic = false
+local Aerodynamic_Time = tick()
+local Last_Input = UserInputService:GetLastInputType()
+local Vector2_Mouse_Location = nil
+local Grab_Parry = nil
+local revertedRemotes = {}
+local originalMetatables = {}
+local Parries = 0
+local Connections_Manager = {}
+local Animation = {storage = {}, current = nil, track = nil}
+local Closest_Entity = nil
+local Parried = false
+local Last_Warping = 0
+local Lerp_Radians = 0
+
+setfpscap(60)
+
+-- Remote Hook (copies parry remote)
+local function isValidRemoteArgs(args)
+    return #args == 7 and
+           type(args[2]) == "string" and  
+           type(args[3]) == "number" and 
+           typeof(args[4]) == "CFrame" and 
+           type(args[5]) == "table" and  
+           type(args[6]) == "table" and 
+           type(args[7]) == "boolean"
+end
+
+local function hookRemote(remote)
+    if not revertedRemotes[remote] then
+        if not originalMetatables[getrawmetatable(remote)] then
+            originalMetatables[getmetatable(remote)] = true
+            local meta = getrawmetatable(remote)
+            setreadonly(meta, false)
+            local oldIndex = meta.__index
+            meta.__index = function(self, key)
+                if (key == "FireServer" and self:IsA("RemoteEvent")) or (key == "InvokeServer" and self:IsA("RemoteFunction")) then
+                    return function(_, ...)
+                        local args = {...}
+                        if isValidRemoteArgs(args) then
+                            if not revertedRemotes[self] then
+                                revertedRemotes[self] = args
+                                setclipboard(HttpService:JSONEncode({
+                                    RemoteName = self.Name,
+                                    RemoteType = self:IsA("RemoteEvent") and "RemoteEvent" or "RemoteFunction",
+                                    Args = args
+                                }))
+                                print("Remote copied!")
+                                game.StarterGui:SetCore("SendNotification", {
+                                    Title = "VHUB",
+                                    Text = "Parry remote copied to clipboard!",
+                                    Duration = 5
+                                })
+                            end
+                        end
+                        return oldIndex(self, key)(_, unpack(args))
+                    end
+                end
+                return oldIndex(self, key)
+            end
+            setreadonly(meta, true)
+        end
+    end
+end
+
+for _, remote in pairs(ReplicatedStorage:GetChildren()) do
+    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+        hookRemote(remote)
+    end
+end
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+        hookRemote(child)
+    end
+end)
+
+-- Animation storage
+for _, animation in pairs(ReplicatedStorage.Misc.Emotes:GetChildren()) do
+    if animation:IsA("Animation") and animation:GetAttribute("EmoteName") then
+        Animation.storage[animation:GetAttribute("EmoteName")] = animation
+    end
+end
+
+local Auto_Parry = {}
+
+Auto_Parry.Get_Balls = function()
+    local Balls = {}
+    for _, obj in pairs(Workspace.Balls:GetChildren()) do
+        if obj:GetAttribute("realBall") then
+            obj.CanCollide = false
+            table.insert(Balls, obj)
+        end
+    end
+    return Balls
+end
+
+Auto_Parry.Get_Ball = function()
+    for _, obj in pairs(Workspace.Balls:GetChildren()) do
+        if obj:GetAttribute("realBall") then
+            obj.CanCollide = false
+            return obj
+        end
+    end
+end
+
+Auto_Parry.Closest_Player = function()
+    local MaxDist = math.huge
+    Closest_Entity = nil
+    for _, plr in pairs(Workspace.Alive:GetChildren()) do
+        if plr ~= LocalPlayer.Character and plr.PrimaryPart then
+            local dist = LocalPlayer:DistanceFromCharacter(plr.PrimaryPart.Position)
+            if dist < MaxDist then
+                MaxDist = dist
+                Closest_Entity = plr
+            end
+        end
+    end
+end
+
+Auto_Parry.Is_Curved = function()
+    local Ball = Auto_Parry.Get_Ball()
+    if not Ball then return false end
+    local Zoomies = Ball:FindFirstChild("zoomies")
+    if not Zoomies then return false end
+    local Ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+    local Velocity = Zoomies.VectorVelocity
+    local DirToBall = (LocalPlayer.Character.PrimaryPart.Position - Ball.Position).Unit
+    local Dot = DirToBall:Dot(Velocity.Unit)
+    local Speed = Velocity.Magnitude
+    local Distance = (LocalPlayer.Character.PrimaryPart.Position - Ball.Position).Magnitude
+    local ReachTime = (Distance / Speed) - (Ping / 1000)
+    if Distance < 20 then return false end
+    if Dot < 0.5 - (Ping / 1000) then return true end
+    return false
+end
+
+local FirstParryDone = false
+function Auto_Parry.Parry()
+    if not FirstParryDone then
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+        FirstParryDone = true
+    else
+        for remote, args in pairs(revertedRemotes) do
+            if remote:IsA("RemoteEvent") then
+                remote:FireServer(unpack(args))
+            elseif remote:IsA("RemoteFunction") then
+                remote:InvokeServer(unpack(args))
+            end
+        end
+    end
+    if Parries >= 7 then return end
+    Parries += 1
+    task.delay(0.5, function() Parries -= 1 end)
+end
+
+-- Manual Spam GUI
+local MauaulSpam
+function ManualSpam()
+    if MauaulSpam then MauaulSpam:Destroy() MauaulSpam = nil return end
+    MauaulSpam = Instance.new("ScreenGui")
+    MauaulSpam.Name = "VHubManualSpam"
+    MauaulSpam.Parent = game:GetService("CoreGui")
+    MauaulSpam.ResetOnSpawn = false
+
+    local Main = Instance.new("Frame", MauaulSpam)
+    Main.Size = UDim2.new(0.23, 0, 0.19, 0)
+    Main.Position = UDim2.new(0.414, 0, 0.404, 0)
+    Main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Main.BorderSizePixel = 0
+    Instance.new("UICorner", Main)
+
+    local Indicator = Instance.new("Frame", Main)
+    Indicator.Name = "Indicator"
+    Indicator.Size = UDim2.new(0.072, 0, 0.12, 0)
+    Indicator.Position = UDim2.new(0.028, 0, 0.073, 0)
+    Indicator.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+
+    local Title = Instance.new("TextButton", Main)
+    Title.Size = UDim2.new(0.668, 0, 0.347, 0)
+    Title.Position = UDim2.new(0.164, 0, 0.327, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Spam"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextScaled = true
+
+    local Gradient = Instance.new("UIGradient", Title)
+    Gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255,0,4)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0))
+    }
+
+    local Info = Instance.new("TextLabel", Main)
+    Info.Size = UDim2.new(0.452, 0, 0.173, 0)
+    Info.Position = UDim2.new(0.548, 0, 0.827, 0)
+    Info.BackgroundTransparency = 1
+    Info.Text = "PC: E to spam"
+    Info.TextColor3 = Color3.fromRGB(57,57,57)
+    Info.TextScaled = true
+
+    local toggled = false
+    local connection
+    local function toggle()
+        toggled = not toggled
+        Indicator.BackgroundColor3 = toggled and Color3.new(0,1,0) or Color3.new(1,0,0)
+        if toggled then
+            connection = RunService.Heartbeat:Connect(function()
+                if not toggled then return end
+                pcall(Auto_Parry.Parry)
+            end)
+        else
+            if connection then connection:Disconnect() end
+        end
+    end
+
+    Title.MouseButton1Click:Connect(toggle)
+    UserInputService.InputBegan:Connect(function(i,gp)
+        if not gp and i.KeyCode == Enum.KeyCode.E then toggle() end
+    end)
+
+    -- Draggable
+    local dragging, dragInput, dragStart, startPos
+    local function update(input)
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    Main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = Main.Position
+        end
+    end)
+    Main.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then update(input) end
+    end)
+    Main.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+end
+
+ManualSpam()
+
+-- Fluent UI
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/CodeE4X-dev/Library/refs/heads/main/FluentRemake.lua"))()
+local Window = Fluent:CreateWindow({
+    Title = "Blade Ball - VHub V3 BETA",
+    SubTitle = "by ketsu",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(500, 300),
+    Acrylic = false,
+    Theme = "DarkPurple",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Home = Window:AddTab({Title = "Home", Icon = "home"}),
+    Main = Window:AddTab({Title = "Main", Icon = "swords"})
+}
+
+Tabs.Home:AddParagraph({Title = "VHub V3 BETA", Content = "Best Blade Ball script 2025\nMade by ketsu"})
+Tabs.Home:AddButton({Title = "Copy Discord", Callback = function()
+    setclipboard("https://discord.gg/hNfKgMSw")
+    Fluent:Notify({Title = "VHub", Content = "Discord copied!", Duration = 3})
+end})
+
+-- Auto Parry
+local AutoParryToggle = Tabs.Main:AddToggle("AutoParry", {Title = "Auto Parry", Default = true})
+AutoParryToggle:OnChanged(function(state)
+    if state then
+        Connections_Manager["AutoParry"] = RunService.PreSimulation:Connect(function()
+            local Balls = Auto_Parry.Get_Balls()
+            if #Balls == 0 then return end
+            for _, Ball in pairs(Balls) do
+                if not Ball then continue end
+                local Zoomies = Ball:FindFirstChild("zoomies")
+                if not Zoomies then continue end
+                if Ball:GetAttribute("target") == tostring(LocalPlayer) then
+                    local Dist = (LocalPlayer.Character.PrimaryPart.Position - Ball.Position).Magnitude
+                    local Speed = Zoomies.VectorVelocity.Magnitude
+                    local Ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 10
+                    local Threshold = (Speed / 3.25) + Ping
+                    local Curved = Auto_Parry.Is_Curved()
+                    if Curved then continue end
+                    if Dist <= Threshold then
+                        Auto_Parry.Parry()
+                    end
+                end
+            end
+        end)
+    else
+        if Connections_Manager["AutoParry"] then
+            Connections_Manager["AutoParry"]:Disconnect()
+            Connections_Manager["AutoParry"] = nil
+        end
+    end
+end)
+
+-- Auto Spam
+local AutoSpamToggle = Tabs.Main:AddToggle("AutoSpam", {Title = "Auto Spam", Default = true})
+AutoSpamToggle:OnChanged(function(state)
+    if state then
+        Connections_Manager["AutoSpam"] = RunService.Heartbeat:Connect(function()
+            local Ball = Auto_Parry.Get_Ball()
+            if not Ball then return end
+            Auto_Parry.Closest_Player()
+            if not Closest_Entity then return end
+            local DistToTarget = LocalPlayer:DistanceFromCharacter(Closest_Entity.PrimaryPart.Position)
+            if DistToTarget < 40 and Parries < 6 then
+                Auto_Parry.Parry()
+            end
+        end)
+    else
+        if Connections_Manager["AutoSpam"] then
+            Connections_Manager["AutoSpam"]:Disconnect()
+            Connections_Manager["AutoSpam"] = nil
+        end
+    end
+end)
+
+-- Manual Spam Toggle
+Tabs.Main:AddToggle("ManualSpamToggle", {Title = "Manual Spam (E)", Default = false, Callback = function(state)
+    if state then ManualSpam() end
+end})
+
+Fluent:Notify({Title = "VHub", Content = "Loaded successfully - by ketsu", Duration = 8})
