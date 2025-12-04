@@ -1596,3 +1596,4 @@ TeleportTab:AddButton("TELEPORT NOW", function()
     teleport(ItemSpots[SelectedItem])
 end)
 return d
+
