@@ -3130,6 +3130,13 @@ local ItemSpots = {
     ["Fish Radar"] = CFrame.new(365.75177, 134.50499, 274.105804, 0.704499543, -0.111681774, -0.70086211, 1.32396817e-05, 0.987542748, -0.157350808, 0.709704578, 0.110844307, 0.695724905)
 }
 
+local TotemSpots = {
+    ["Aurora Totem"]     = CFrame.new(-1812.8, -136.9, -3281),
+    ["Sundial Totem"]    = CFrame.new(-1149.2, 136.9, -1077),
+    ["Smokescreen Totem"] = CFrame.new(2791.8, 139.7, -629.9),
+    ["Tempest Totem"]    = CFrame.new(-930.9, 223.8, -988.3)
+}
+
 -- Extract names for dropdowns
 local worldNames, npcNames, itemNames = {}, {}, {}
 for name,_ in pairs(WorldSpots) do table.insert(worldNames, name) end
@@ -3546,8 +3553,15 @@ PlayerTab:AddToggle("Walk on Water", false, function(state)
     end
 end)
 
--- Optional: Add a slider to adjust water height
-PlayerTabnTab:AddSlider("Water Height", 120, 140, WATER_Y_LEVEL, function(value)
-    WATER_Y_LEVEL = value
+local TotemDropdown = TeleportTab:AddDropdown("Select Totem", "Aurora Totem", {
+    "Aurora Totem",
+    "Sundial Totem",
+    "Smokescreen Totem",
+    "Tempest Totem"
+}, function(selected)
+    local cf = TotemSpots[selected]
+    if cf and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = cf
+    end
 end)
 return d
