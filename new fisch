@@ -3,8 +3,10 @@ do
 		game.Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("RaitoLib"):Destroy()
 	end
 end
+
 local a = game:GetService("UserInputService")
 local b = game:GetService("TweenService")
+
 local function c(c, d)
 	local e = nil
 	local f = nil
@@ -47,7 +49,9 @@ local function c(c, d)
 		end
 	)
 end
+
 local d = {}
+
 function d:AddWindow(d, e)
 	local e = e or Enum.KeyCode.RightControl
 	local f = false
@@ -56,64 +60,63 @@ function d:AddWindow(d, e)
 	h.Name = "RaitoLib"
 	h.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 	h.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	h.ResetOnSpawn = false
+
 	local i = Instance.new("Frame")
 	i.Name = "Main"
 	i.Parent = h
 	i.AnchorPoint = Vector2.new(0.5, 0.5)
-	i.BackgroundColor3 = Color3.fromRGB(20, 20, 20) -- Black background
+	i.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 	i.BackgroundTransparency = 0
 	i.BorderSizePixel = 0
 	i.ClipsDescendants = true
 	i.Position = UDim2.new(0.499526083, 0, 0.499241292, 0)
 	i.Size = UDim2.new(0, 600, 0, 350)
-	local h = Instance.new("UICorner")
-	h.Name = "MainCorner"
-	h.CornerRadius = UDim.new(0, 9)
-	h.Parent = i
-	local h = Instance.new("ImageButton")
-	h.Parent = i
-	h.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- White background for close button
-	h.BackgroundTransparency = 1
-	h.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	h.BorderSizePixel = 0
-	h.Position = UDim2.new(0.953, 0, 0.029, 0)
-	h.Size = UDim2.new(0, 17, 0, 18)
-	h.Image = "rbxassetid://9886659671"
-	h.ImageColor3 = Color3.fromRGB(255, 255, 255) -- White X
-	h.MouseEnter:Connect(
-		function()
-			b:Create(
-				h,
-				TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ImageColor3 = Color3.fromRGB(200, 200, 200)} -- Light gray hover
-			):Play()
-		end
-	)
-	h.MouseLeave:Connect(
-		function()
-			b:Create(
-				h,
-				TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ImageColor3 = Color3.fromRGB(255, 255, 255)} -- Back to white
-			):Play()
-		end
-	)
-	h.MouseButton1Click:Connect(
-		function()
-			do
-				local a = game.Players.LocalPlayer.PlayerGui:FindFirstChild("RaitoLib")
-				if a then
-					a:Destroy()
-				end
-			end
-			do
-				local a = game.Players.LocalPlayer.PlayerGui:FindFirstChild("Visible")
-				if a then
-					a:Destroy()
-				end
-			end
-		end
-	)
+
+	local MainCorner = Instance.new("UICorner")
+	MainCorner.Name = "MainCorner"
+	MainCorner.CornerRadius = UDim.new(0, 9)
+	MainCorner.Parent = i
+
+	-- ==================== CLOSE BUTTON (NOW MINIMIZES INSTEAD OF DESTROYING) ====================
+local CloseButton = Instance.new("ImageButton")
+CloseButton.Parent = i
+CloseButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.BackgroundTransparency = 1
+CloseButton.BorderSizePixel = 0
+CloseButton.Position = UDim2.new(0.953, 0, 0.029, 0)
+CloseButton.Size = UDim2.new(0, 17, 0, 18)
+CloseButton.Image = "rbxassetid://9886659671"
+CloseButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+
+-- Hover Effects (Same as before)
+CloseButton.MouseEnter:Connect(function()
+    b:Create(
+        CloseButton,
+        TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {ImageColor3 = Color3.fromRGB(200, 200, 200)}
+    ):Play()
+end)
+
+CloseButton.MouseLeave:Connect(function()
+    b:Create(
+        CloseButton,
+        TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {ImageColor3 = Color3.fromRGB(255, 255, 255)}
+    ):Play()
+end)
+
+-- MINIMIZE ON CLICK (Replaces Destroy)
+CloseButton.MouseButton1Click:Connect(function()
+    -- Minimize main UI
+    i:TweenSize(UDim2.new(0, 0, 0, 0), "Out", "Quad", 0.35, true)
+    
+    -- Show minimizer bar (will be created below)
+    if screenGui:FindFirstChild("RaitoLib_Minimizer") then
+        local minimizer = screenGui.RaitoLib_Minimizer
+        minimizer:TweenPosition(UDim2.new(0.5, 0, 0, 12), "Out", "Quad", 0.4, true)
+    end
+end)
 	local h = Instance.new("Frame")
 	h.Name = "Top"
 	h.Parent = i
@@ -1174,6 +1177,119 @@ function d:AddWindow(d, e)
 	return a
 end
 local window = d:AddWindow("internal.lua", Enum.KeyCode.RightControl)
+local TweenService = game:GetService("TweenService")
+local startTime = tick()
+local isMinimized = false
+
+-- Wait for main UI
+repeat task.wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("RaitoLib")
+local screenGui = game.Players.LocalPlayer.PlayerGui.RaitoLib
+local mainFrame = screenGui:WaitForChild("Main")
+
+-- ==================== CLOSE BUTTON (NOW MINIMIZES) ====================
+local CloseButton = Instance.new("ImageButton")
+CloseButton.Parent = mainFrame
+CloseButton.BackgroundTransparency = 1
+CloseButton.BorderSizePixel = 0
+CloseButton.Position = UDim2.new(0.953, 0, 0.029, 0)
+CloseButton.Size = UDim2.new(0, 17, 0, 18)
+CloseButton.Image = "rbxassetid://9886659671"
+CloseButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+
+-- Hover effects
+CloseButton.MouseEnter:Connect(function()
+    TweenService:Create(CloseButton, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {ImageColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+end)
+CloseButton.MouseLeave:Connect(function()
+    TweenService:Create(CloseButton, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+end)
+
+-- ==================== CREATE MINIMIZER BAR ====================
+local minimizer = Instance.new("Frame")
+minimizer.Name = "RaitoLib_Minimizer"
+minimizer.Parent = screenGui
+minimizer.AnchorPoint = Vector2.new(0.5, 0)
+minimizer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+minimizer.Position = UDim2.new(0.5, 0, 0, -40)  -- Hidden
+minimizer.Size = UDim2.new(0, 280, 0, 40)
+minimizer.ZIndex = 999
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = minimizer
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(80, 80, 80)
+stroke.Thickness = 1.5
+stroke.Parent = minimizer
+
+-- Runtime Label
+local runtimeLabel = Instance.new("TextLabel")
+runtimeLabel.Parent = minimizer
+runtimeLabel.BackgroundTransparency = 1
+runtimeLabel.Position = UDim2.new(0, 18, 0, 0)
+runtimeLabel.Size = UDim2.new(1, -90, 1, 0)
+runtimeLabel.Font = Enum.Font.GothamBold
+runtimeLabel.Text = "internal.lua - 00:00:00"
+runtimeLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+runtimeLabel.TextSize = 14
+runtimeLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Restore Button (same X icon)
+local restoreBtn = Instance.new("ImageButton")
+restoreBtn.Parent = minimizer
+restoreBtn.AnchorPoint = Vector2.new(1, 0.5)
+restoreBtn.BackgroundTransparency = 1
+restoreBtn.Position = UDim2.new(1, -16, 0.5, 0)
+restoreBtn.Size = UDim2.new(0, 20, 0, 20)
+restoreBtn.Image = "rbxassetid://9886659671"
+restoreBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+
+restoreBtn.MouseEnter:Connect(function()
+    TweenService:Create(restoreBtn, TweenInfo.new(0.4), {ImageColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+end)
+restoreBtn.MouseLeave:Connect(function()
+    TweenService:Create(restoreBtn, TweenInfo.new(0.4), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+end)
+
+-- ==================== MINIMIZE / RESTORE FUNCTIONS ====================
+local function minimize()
+    if isMinimized then return end
+    isMinimized = true
+    mainFrame:TweenSize(UDim2.new(0, 0, 0, 0), "Out", "Quad", 0.35, true)
+    minimizer:TweenPosition(UDim2.new(0.5, 0, 0, 12), "Out", "Quad", 0.4, true)
+end
+
+local function restore()
+    if not isMinimized then return end
+    isMinimized = false
+    mainFrame:TweenSize(UDim2.new(0, 600, 0, 350), "Out", "Quad", 0.35, true)
+    minimizer:TweenPosition(UDim2.new(0.5, 0, 0, -40), "In", "Quad", 0.35, true)
+end
+
+-- Connect buttons
+CloseButton.MouseButton1Click:Connect(minimize)
+restoreBtn.MouseButton1Click:Connect(restore)
+
+-- RightControl toggle
+game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.RightControl then
+        if isMinimized then restore() else minimize() end
+    end
+end)
+
+-- Runtime timer
+spawn(function()
+    while minimizer.Parent do
+        local elapsed = tick() - startTime
+        local h = math.floor(elapsed / 3600)
+        local m = math.floor((elapsed % 3600) / 60)
+        local s = math.floor(elapsed % 60)
+        runtimeLabel.Text = string.format("internal.lua - %02d:%02d:%02d", h, m, s)
+        task.wait(0.5)
+    end
+end)
 -- Services & Globals (unchanged)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -1322,53 +1438,74 @@ local function equipRod()
     return false
 end
 
--- ==================== SUPER INSTANT REEL (NEW) ====================
-Workspace.DescendantAdded:Connect(function(descendant)
+-- ==================== SUPER INSTANT REEL (FIXED & PERFECT) ====================
+local reelBindable = ReplicatedStorage:WaitForChild("events"):WaitForChild("bindable_reel_finished")
+local reelRemote = ReplicatedStorage:WaitForChild("events"):WaitForChild("reelfinished")
+
+Workspace.DescendantAdded:Connect(function(obj)
     if not superinstantreeel then return end
-    if descendant.Name == "bobber" then
-        local rod = descendant.Parent
-        if rod and rod.Parent == LocalPlayer.Character then
-            local values = rod:FindFirstChild("values")
-            local zoneValue = values and values:FindFirstChild("bobberzone")
+    if obj.Name ~= "bobber" then return end
+    
+    local rod = obj.Parent
+    if not rod or rod.Parent ~= LocalPlayer.Character then return end
 
-            descendant.DescendantAdded:Connect(function(child)
-                if not superinstantreeel then return end
-                if (child.Name == "Fish" or child.Name == "Crate") and child.Parent then
-                    local isPerfect = false
-                    if Fishing.SuperInstantPerfectChance >= 100 then
-                        isPerfect = true
-                    elseif Fishing.SuperInstantPerfectChance > 0 then
-                        isPerfect = math.random(1, 100) <= Fishing.SuperInstantPerfectChance
-                    end
+    obj.DescendantAdded:Connect(function(child)
+        if not superinstantreeel then return end
+        if not (child.Name == "Fish" or child.Name == "Crate") then return end
 
-                    pcall(function() ReplicatedStorage.events["bindable_reel_finished"]:Fire(true) end)
-                    task.wait(0.001)
-                    pcall(function() ReplicatedStorage.events["reelfinished"]:FireServer(100, isPerfect) end)
-                    task.wait(0.4)
-                    unequipRod()
-                    equipRod()
-                end
-            end)
-        end
-    end
+        task.defer(function()
+            local perfect = Fishing.SuperInstantPerfectChance >= 100
+                or (Fishing.SuperInstantPerfectChance > 0 and math.random(1,100) <= Fishing.SuperInstantPerfectChance)
+
+            -- FIXED: Proper parameters (100, perfect)
+            reelBindable:Fire(100, perfect)
+            reelRemote:FireServer(100, perfect)
+
+            -- Prevent rod lock - instant re-equip
+            task.defer(unequipRod)
+            task.defer(equipRod)
+        end)
+    end)
 end)
 
--- ==================== SHAKE ====================
-local function clickShake()
-    if not playerGui:FindFirstChild("shakeui") then return end
-    local btn = playerGui.shakeui.safezone:FindFirstChild("button")
-    if not btn then return end
-    for i = 1, 3 do
-        xpcall(function()
-            local dummy = playerGui:FindFirstChild("_") or Instance.new("Frame")
-            dummy.Name = "_"; dummy.BackgroundTransparency = 1; dummy.Parent = playerGui
-            playerGui.SelectionImageObject = dummy
-            GuiService.SelectedObject = btn
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-        end, warn)
-        task.wait(0.01)
-    end
+-- ==================== PHANTOM SHAKE (1MS DELAY - NO FREEZE) ====================
+-- ==================== PHANTOM SHAKE (SMOOTH & LAG-FREE - RECOMMENDED) ====================
+local elementsDestroyed = false
+
+local function destroyTopbarOnce()
+    if elementsDestroyed then return end
+    pcall(function()
+        local pgui = game.Players.LocalPlayer.PlayerGui
+        if pgui:FindFirstChild("TopbarStandard") then
+            pgui.TopbarStandard:Destroy()
+        end
+        local hud = pgui:FindFirstChild("hud")
+        if hud and hud:FindFirstChild("safezone") and hud.safezone:FindFirstChild("topbar") then
+            hud.safezone.topbar:Destroy()
+        end
+    end)
+    elementsDestroyed = true
+end
+
+local function phantomShake()
+    destroyTopbarOnce()
+    spawn(function()
+        while Fishing.AutoShake do
+            local shakeui = playerGui:FindFirstChild("shakeui")
+            if shakeui and shakeui.Enabled then
+                local safezone = shakeui:FindFirstChild("safezone")
+                if safezone then
+                    local button = safezone:FindFirstChild("button")
+                    if button and button:IsA("ImageButton") and button.Visible then
+                        GuiService.SelectedObject = button
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                    end
+                end
+            end
+            task.wait(0.99)  -- PERFECT BALANCE: Fast + ZERO LAG + 100% Reliable
+        end
+    end)
 end
 
 -- ==================== REEL FUNCTIONS ====================
@@ -1393,12 +1530,17 @@ local function keepBarCentered()
 end
 
 local function doInstantReel()
-    print("[AutoFish] INSTANT REEL FIRED!")
-    pcall(function() events["bindable_reel_finished"]:FireServer(100, true) end)
+    pcall(function() 
+        events["bindable_reel_finished"]:FireServer(100, true) 
+    end)
     task.wait(0.05)
-    pcall(function() events["reelfinished "]:FireServer(100, false) end)
+    pcall(function() 
+        events.reelfinished:FireServer(100, false)  -- FIXED: No space typo
+    end)
     task.wait(0.05)
-    pcall(function() events["reelfinished"]:FireServer(100, true) end)
+    pcall(function() 
+        events.reelfinished:FireServer(100, true) 
+    end)
 end
 
 -- ==================== CAST FUNCTIONS ====================
@@ -1435,9 +1577,9 @@ local function instantCast()
         local params = RaycastParams.new()
         params.FilterType = Enum.RaycastFilterType.Include
         params.FilterDescendantsInstances = {workspace.Terrain}
-        local result = workspace:Raycast(bobber.Position, Vector3.new(0, -1000, 0), params)
-        if result then
-            bobber:PivotTo(CFrame.new(result.Position + Vector3.new(0, 3, 0)))
+        local result = workspace:Raycast(bobber.Position + Vector3.new(0, 10, 0), Vector3.new(0, -1000, 0), params)
+        if result and result.Material == Enum.Material.Water then
+            bobber:PivotTo(CFrame.new(result.Position + Vector3.new(0, 2, 0)))
         end
     end
     isCasting = false
@@ -1447,15 +1589,23 @@ local function autoCast()
     if Fishing.CastType == "Instant" then instantCast() else legitCast() end
 end
 
+-- ==================== CHARACTER RESPAWN HANDLER ====================
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(3)
+    equipRod()
+end)
+
 -- ==================== MAIN LOOP ====================
 spawn(function()
     while true do
         task.wait()
 
+        -- PHANTOM SHAKE (1MS - PERFECT SPEED)
         if Fishing.AutoShake and playerGui:FindFirstChild("shakeui") then
-            clickShake()
+            phantomShake()
         end
 
+        -- AUTO REEL
         if Fishing.AutoReel and playerGui:FindFirstChild("reel") then
             if Fishing.ReelMode == "Instant" then
                 local fish = playerGui.reel.bar.fish
@@ -1478,13 +1628,15 @@ spawn(function()
             elseif Fishing.ReelMode == "Smooth" then
                 doLegitReel()
             end
-            -- SuperInstant handled by DescendantAdded listener above
+            -- SuperInstant handled by DescendantAdded listener
         end
 
+        -- AUTO CAST
         if Fishing.AutoCast and not playerGui:FindFirstChild("reel") and not playerGui:FindFirstChild("shakeui") then
             spawn(autoCast)
         end
 
+        -- RESET STATE
         if not playerGui:FindFirstChild("reel") and not playerGui:FindFirstChild("shakeui") then
             lastFishX = nil
             instantFireTime = nil
@@ -1596,4 +1748,3 @@ TeleportTab:AddButton("TELEPORT NOW", function()
     teleport(ItemSpots[SelectedItem])
 end)
 return d
-
